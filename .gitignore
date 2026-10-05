@@ -1,0 +1,21 @@
+# Dependencies and build/test output
+node_modules/
+.next/
+out/
+coverage/
+
+# All environment files remain ignored; no example is authorized yet.
+.env
+.env.*
+
+# Local editor and runtime files
+.idea/
+.vscode/
+*.log
+*.tsbuildinfo
+.vercel/
+
+# OS-generated clutter
+.DS_Store
+Thumbs.db
+Desktop.ini
