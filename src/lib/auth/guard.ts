@@ -4,6 +4,7 @@ import { TEST_SUPABASE_URL } from "@/lib/config";
 import { readAuthConfig } from "./runtime-config";
 import { requestClient } from "@/lib/supabase/server";
 import type { AdminClient } from "@/lib/supabase/client";
+import { diagnosticsFor, observeResult, sdkError } from "./diagnostics";
 
 export type Denial = "configuration" | "sign-in" | "denied" | "verification-error" | "mfa" | "policy-required" | "policy-error";
 export type StaffAccess = { allowed: true; userId: string; role: "administrator" | "moderator"; aal: "aal1" | "aal2" } |
@@ -21,38 +22,86 @@ const claimsSchema = z.object({
  * Neither cookie-supplied user metadata nor getSession().user grants access.
  */
 export async function staffAccess(client: AdminClient, protectedAccess: boolean): Promise<StaffAccess> {
-  if (!readAuthConfig()) return { allowed: false, reason: "configuration" };
+  const diagnostics = diagnosticsFor(client);
+  const deny = (reason: Denial): StaffAccess => {
+    diagnostics.emit("final", "denied");
+    return { allowed: false, reason };
+  };
+  if (!readAuthConfig()) {
+    diagnostics.emit("configuration", "error", undefined, "configuration-unavailable");
+    return deny("configuration");
+  }
+  diagnostics.emit("configuration", "ok");
+  let stage: "claims" | "claims-validation" | "identity" | "identity-consistency" | "account" | "role" | "eligibility" | "mfa" | "policy" = "claims";
   try {
     const verified = await client.auth.getClaims();
-    if (verified.error || !verified.data) return { allowed: false, reason: "sign-in" };
+    observeResult(diagnostics, stage, verified);
+    if (verified.error || !verified.data) return deny("sign-in");
+    stage = "claims-validation";
     const parsed = claimsSchema.safeParse(verified.data.claims);
-    if (!parsed.success || parsed.data.exp <= Date.now() / 1000) return { allowed: false, reason: "denied" };
+    if (!parsed.success || parsed.data.exp <= Date.now() / 1000) {
+      diagnostics.emit(stage, "denied", undefined, "invalid-claims");
+      return deny("denied");
+    }
+    diagnostics.emit(stage, "ok");
+    stage = "identity";
     const identity = await client.auth.getUser();
     const user = identity.data.user;
-    if (identity.error || !user) return { allowed: false, reason: "sign-in" };
+    observeResult(diagnostics, stage, identity, !!user);
+    if (identity.error || !user) return deny("sign-in");
+    stage = "identity-consistency";
     if (user.id !== parsed.data.sub || !user.email_confirmed_at || !Number.isFinite(Date.parse(user.email_confirmed_at))) {
-      return { allowed: false, reason: "denied" };
+      diagnostics.emit(stage, "denied", undefined, "identity-inconsistent");
+      return deny("denied");
     }
+    diagnostics.emit(stage, "ok");
+    stage = "account";
     const account = await client.from("user_accounts").select("account_status").eq("user_id", user.id).maybeSingle();
+    observeResult(diagnostics, stage, account);
+    stage = "role";
     const staff = await client.from("staff_roles").select("role").eq("user_id", user.id).maybeSingle();
-    if (account.error || staff.error) return { allowed: false, reason: "verification-error" };
+    observeResult(diagnostics, stage, staff);
+    if (account.error || staff.error) return deny("verification-error");
+    stage = "eligibility";
     if (account.data?.account_status !== "active" || !["administrator", "moderator"].includes(staff.data?.role)) {
-      return { allowed: false, reason: "denied" };
+      diagnostics.emit(stage, "denied", undefined, "ineligible");
+      return deny("denied");
     }
+    diagnostics.emit(stage, "ok");
     const role = staff.data?.role as "administrator" | "moderator";
     if (protectedAccess) {
-      if (parsed.data.aal !== "aal2") return { allowed: false, reason: "mfa" };
+      stage = "mfa";
+      if (parsed.data.aal !== "aal2") {
+        diagnostics.emit(stage, "required", undefined, "mfa-required");
+        return deny("mfa");
+      }
+      diagnostics.emit(stage, "ok");
+      stage = "policy";
       try {
         const policy = await client.rpc("has_current_policy_acceptance");
-        if (policy.error || (policy.data !== true && policy.data !== false)) return { allowed: false, reason: "policy-error" };
-        if (policy.data === false) return { allowed: false, reason: "policy-required" };
-      } catch {
-        return { allowed: false, reason: "policy-error" };
+        if (policy.error) {
+          diagnostics.emit(stage, "error", sdkError(policy));
+          return deny("policy-error");
+        }
+        if (policy.data !== true && policy.data !== false) {
+          diagnostics.emit(stage, "malformed", undefined, "malformed-policy");
+          return deny("policy-error");
+        }
+        if (policy.data === false) {
+          diagnostics.emit(stage, "required", undefined, "policy-required");
+          return deny("policy-required");
+        }
+        diagnostics.emit(stage, "ok");
+      } catch (error) {
+        diagnostics.emit(stage, "exception", error);
+        return deny("policy-error");
       }
     }
+    diagnostics.emit("final", "ok");
     return { allowed: true, userId: user.id, role, aal: parsed.data.aal };
-  } catch {
-    return { allowed: false, reason: "verification-error" };
+  } catch (error) {
+    diagnostics.emit(stage, "exception", error);
+    return deny("verification-error");
   }
 }
 

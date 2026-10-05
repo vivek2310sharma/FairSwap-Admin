@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
 import { createAdminClient } from "./client";
+import { requestDiagnostics } from "@/lib/auth/diagnostics";
 
 export async function requestClient(writable = false) {
   const store = await cookies();
@@ -15,5 +16,5 @@ export async function requestClient(writable = false) {
       if (!writable) return;
       updates.forEach(({ name, value, options }) => store.set(name, value, options));
     },
-  }, !loopback);
+  }, !loopback, requestDiagnostics(host, "guard", requestHeaders));
 }

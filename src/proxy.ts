@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, PRIVATE_CACHE, type CookieWrite } from "@/lib/supabase/client";
+import { requestDiagnostics, observeResult } from "@/lib/auth/diagnostics";
 
 /** Refresh only. Entry-point guards remain authoritative; no policy-error bypass. */
 export async function proxy(request: NextRequest) {
+  const diagnostics = requestDiagnostics(request.nextUrl.host, "proxy", request.headers);
   const outgoing = new Map<string, CookieWrite>();
   const responseHeaders = new Map<string, string>();
   const client = createAdminClient({
@@ -14,10 +16,13 @@ export async function proxy(request: NextRequest) {
       });
       Object.entries(headers).forEach(([name, value]) => responseHeaders.set(name, value));
     },
-  }, request.nextUrl.protocol === "https:" || !["localhost", "127.0.0.1"].includes(request.nextUrl.hostname));
+  }, request.nextUrl.protocol === "https:" || !["localhost", "127.0.0.1"].includes(request.nextUrl.hostname), diagnostics);
   if (client) {
-    try { await client.auth.getClaims(); } catch { /* Protected entry points fail closed. */ }
-  }
+    try {
+      const result = await client.auth.getClaims();
+      observeResult(diagnostics, "proxy-claims", result);
+    } catch (error) { diagnostics.emit("proxy-claims", "exception", error); /* Protected entry points fail closed. */ }
+  } else diagnostics.emit("configuration", "error", undefined, "configuration-unavailable");
   const response = NextResponse.next({ request });
   outgoing.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
   responseHeaders.forEach((value, name) => response.headers.set(name, value));
