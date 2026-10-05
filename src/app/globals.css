@@ -10,3 +10,15 @@
 body {
   margin: 0;
 }
+
+.auth-shell { max-width: 36rem; margin: 3rem auto; padding: 1.5rem; }
+.auth-shell h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 1rem; }
+.auth-shell h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 1rem; }
+.auth-shell p { margin: 1rem 0; }
+.auth-shell form { display: grid; gap: .75rem; margin: 1.5rem 0; }
+.auth-shell input, .auth-shell select { border: 1px solid #64748b; border-radius: .25rem; padding: .6rem; background: white; }
+.auth-shell button { background: #065f46; color: white; padding: .7rem; border-radius: .25rem; cursor: pointer; }
+.auth-shell button:disabled { opacity: .6; cursor: wait; }
+.auth-shell a { color: #065f46; text-decoration: underline; }
+.auth-shell [role="alert"] { color: #991b1b; }
+.auth-shell code { overflow-wrap: anywhere; }
