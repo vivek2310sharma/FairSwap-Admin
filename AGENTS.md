@@ -2,9 +2,9 @@
 
 Read [.agents/rules/admin.md](.agents/rules/admin.md), [progress](docs/PROGRESS.md), the [ADMIN-01 plan](docs/plans/admin-01-plan.md), and [open risks](docs/risks/admin-extraction.md) before work. Preserve the pinned revision in [provenance](docs/PROVENANCE.md).
 
-This is a planned Next.js App Router project. Once dependencies exist, check framework documentation for the installed version before implementation; do not assume the latest documentation matches that version. ADMIN-00 installs no dependencies and creates no application scaffolding.
+This is a Next.js App Router project. Check framework documentation for the installed version before implementation; do not assume the latest documentation matches that version. ADMIN-01A uses Next.js 16.3.5. ADMIN-00 itself installed no dependencies or application scaffold.
 
-Antigravity remains the primary implementation environment; Codex's temporary assignment is ADMIN-00 closeout only. Follow the agreed architecture and workflow. Separate planning, approved implementation, and verification; do not report planned or untested work as completed.
+Antigravity remains the primary implementation environment; Codex's explicitly authorised temporary assignment includes ADMIN-00 baseline and ADMIN-01A foundation only. Follow the agreed architecture and workflow. Separate planning, approved implementation, and verification; do not report planned or untested work as completed.
 
 Keep changes within the authorized task and repository boundaries. No production access or changes without explicit approval. No secrets in code, documentation, logs, URLs, or browser bundles. Do not read secret-bearing environment files for ordinary documentation work.
 

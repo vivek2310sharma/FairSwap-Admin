@@ -1,6 +1,6 @@
 # ADMIN-01 implementation plan
 
-Status: **PLANNED / NOT STARTED / NOT TESTED**. Primary implementation environment: Antigravity. Source baseline: Web **`8ad67672896a1a11f51009ffddf3bb39ee3cf698`**; follow [provenance](../PROVENANCE.md) for extraction. This plan does not authorize production or backend changes.
+Status: **ADMIN-01A foundation implemented and locally checked; pending review. ADMIN-01B and ADMIN-01C NOT STARTED.** The complete staff workflow is not implemented or tested. Primary implementation environment: Antigravity. Source baseline: Web **`8ad67672896a1a11f51009ffddf3bb39ee3cf698`**; follow [provenance](../PROVENANCE.md) for extraction. This plan does not authorize production or backend changes.
 
 ## First functional milestone
 
@@ -13,6 +13,8 @@ Out of scope: user management, reports, support, privacy processing, categories,
 One separate staff-facing codebase: Next.js App Router, TypeScript, Tailwind CSS, Supabase. One separate Admin Vercel project is planned with distinct Test/Production deployments and proposed hosts `admin-test.fairswap.in` and `admin.fairswap.in`. Hosts, Vercel, and DNS are not configured in ADMIN-00.
 
 Test connects only to FairSwapTest (`wpppxlnbzqynvhpeuavd`). Production connects only to FairSwapProd; production configuration remains out of scope. Validate deployment configuration and fail closed when Test configuration is missing. No fallback to Production and no runtime database dropdown beneath an authenticated session.
+
+ADMIN-01B must enforce effective server-side deployment configuration validation where sessions/clients and protected operations are created or used. It must reject malformed or wrong-project configuration and fail closed before any backend operation. The ADMIN-01A static Test label and build-time validation do not verify this future boundary enforcement; no backend/client/authentication work is authorised in the tooling correction pass.
 
 Admin owns UI, sessions/auth orchestration, workflows, server routes/actions, and Admin tests. Web/Supabase owns migrations, shared schema, RLS, grants, RPC implementations, backend configuration, and backend tests. Any required backend change becomes a separately reviewed Web/backend task with Web/Android/iOS impact review.
 
