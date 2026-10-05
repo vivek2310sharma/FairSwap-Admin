@@ -31,6 +31,18 @@ These paths are reported by the original ADMIN-00 review, supplied in the correc
 
 No application code was copied or adapted during ADMIN-00. Documentation reflects the user-supplied closeout handoff.
 
+## Targeted foundation dependency inspection
+
+For ADMIN-01A, only Web `package.json` at the pinned SHA was freshly inspected to check dependency constraints. It specifies pnpm 10.12.1, Next.js/eslint-config-next 16.3.5, React/react-dom 19.2.8, Zod 3.24.2, Tailwind/PostCSS adapter major 4, TypeScript major 5, ESLint major 9, Vitest ^3.2.4, jsdom ^26.1.0, and Testing Library React ^16.3.0. The Admin foundation retains these relevant constraints and pins its selected versions in package.json and pnpm-lock.yaml. Supabase packages and unrelated Web dependencies are not installed because backend integration is excluded.
+
+The foundation shell/configuration/tests are newly authored for the approved assignment. No Web application source was copied or adapted; the extraction register remains empty. Official framework/tool documentation informed setup: the tagged Next.js 16.3.5 installation guide and installed 16.3.5 documentation under `node_modules/next/dist/docs/` for installation, Vitest, and ESLint were read. Tailwind 4 PostCSS and Zod 3 safeParse documentation were also consulted. No scaffolder was run.
+
+### Reviewed dependency-maintenance exception (2026-10-05)
+
+The user explicitly authorised a bounded tooling correction after foundation review: replace Vitest 3.2.4 with exact stable **4.1.11** and align development runtime requirements to **Node >=24.15.0 <25**, using pnpm 10.12.1. This is a documented exception to the initial Web dependency constraint, not adoption of a new Web source revision. The application framework and all other direct dependency versions remain unchanged. The lockfile changes include the related Vitest packages needed by that version; there is no blanket dependency update or Vitest 5 upgrade.
+
+The [maintainer support notice](https://vitest.dev/releases) lists 4.1 as receiving important/security backports. The [4.1.11 release](https://github.com/vitest-dev/vitest/releases/tag/v4.1.11) includes redirect-mock file-allowlist restriction. Registry metadata identifies 4.1.11 as the latest published stable 4.1 patch at this review. [GHSA-82fw-gwwq-j7x9](https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9) identifies the 4.1.11 fix; [GHSA-5xrq-8626-4rwp](https://github.com/vitest-dev/vitest/security/advisories/GHSA-5xrq-8626-4rwp) identifies fixes in 4.1.0 and 3.2.5. Chosen 4.1.11 contains both fixes. The advisories concern development test-server surfaces; no compromise or Supabase/backend defect was demonstrated here. The project retains jsdom, non-interactive vitest run, and fetch protections without test UI/API or Browser Mode exposure.
+
 ## Future extraction register
 
 Record each source extraction before or alongside implementation:

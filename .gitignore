@@ -4,9 +4,10 @@ node_modules/
 out/
 coverage/
 
-# All environment files remain ignored; no example is authorized yet.
+# Real environment files remain ignored; the approved example has placeholders only.
 .env
 .env.*
+!.env.example
 
 # Local editor and runtime files
 .idea/

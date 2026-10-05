@@ -6,7 +6,7 @@ Antigravity is the primary development environment. One Admin codebase uses Next
 
 FairSwap-Web/Supabase owns `supabase/migrations/**`, `supabase/tests/**`, shared schema, RLS, grants, RPC implementations, and shared backend configuration. Do not introduce Admin migrations or duplicate moderation business rules. Raise backend changes as separately reviewed Web/backend tasks, with explicit Web, Android, and iOS impact review. Preserve Web `/admin` until separately approved retirement.
 
-Use plan/build/verify separation. Approval of a plan does not establish successful implementation or testing. Carry unresolved findings forward until supported by evidence. Proposed workflow: feature/fix/chore branches from `staging`, PR to `staging`, FairSwapTest verification, reviewed release PR to `main`. Branches are not created in ADMIN-00.
+Use plan/build/verify separation. Approval of a plan does not establish successful implementation or testing. Carry unresolved findings forward until supported by evidence. Workflow: feature/fix/chore branches from `staging`, PR to `staging`, FairSwapTest verification, reviewed release PR to `main`. The reviewed bootstrap explicitly permits local staging and the ADMIN-01A feature branch from the documentation baseline; no remote branches or releases are authorised here.
 
 ## Environment and session boundaries
 
