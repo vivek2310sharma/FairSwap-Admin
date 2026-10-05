@@ -74,6 +74,53 @@ beforeEach(() => {
 afterEach(() => { process.argv = initialArgv; vi.restoreAllMocks(); });
 
 describe("local server-owned activation", () => {
+  it.each([
+    { options: ["--hostname", "127.0.0.1", "--port", "3102"], command: "start" },
+    { options: ["-p", "3102", "-H", "localhost"], command: "start" },
+    { options: ["-H", "127.0.0.1"], command: "dev" },
+    { options: ["--hostname", "localhost"], command: "start" },
+  ])("enables the supported unambiguous CLI grammar %j", ({ options, command }) => {
+    const events: DiagnosticEvent[] = [];
+    const diagnostic = createDiagnostics("127.0.0.1:3102", "guard", false, {
+      argv: [...argv.slice(0, 2), command, ...options], env: environment, sink: (event) => events.push(event),
+    });
+    expect(diagnostic.enabled).toBe(true);
+    diagnostic.emit("claims", "ok");
+    expect(events).toHaveLength(1);
+  });
+  it.each([
+    ["--hostname", "127.0.0.1", "--hostname", "127.0.0.1"],
+    ["--hostname", "127.0.0.1", "--hostname=0.0.0.0"],
+    ["--hostname=0.0.0.0", "--hostname", "127.0.0.1"],
+    ["--hostname", "127.0.0.1", "-H0.0.0.0"],
+    ["-H0.0.0.0", "--hostname", "127.0.0.1"],
+    ["-H", "localhost", "--hostname", "127.0.0.1"],
+    ["--hostname", "127.0.0.1", "-H", "localhost"],
+    ["--hostname=127.0.0.1"], ["-H127.0.0.1"],
+    ["--", "--hostname", "127.0.0.1"],
+    ["--hostname", "127.0.0.1", "--", "--hostname=0.0.0.0"],
+    ["--hostname"], ["-H"], ["--hostname", ""],
+    ["--hostname", "--port", "3102"],
+    ["--hostname", "127.0.0.1:3102"],
+    ["--hostname", "0.0.0.0"],
+    ["--hostname", "127.0.0.1", "--port"],
+    ["--hostname", "127.0.0.1", "--port=3102"],
+    ["--hostname", "127.0.0.1", "-p3102"],
+    ["--hostname", "127.0.0.1", "--port", "0"],
+    ["--hostname", "127.0.0.1", "--port", "65536"],
+    ["--hostname", "127.0.0.1", "--port", "3102", "-p", "3103"],
+    [".", "--hostname", "127.0.0.1"],
+    ["--hostname", "127.0.0.1", "--inspect"],
+    ["--hostname", "127.0.0.1", "--hostname=127.0.0.1"],
+  ].map((options) => ({ options })))("rejects ambiguous or unsupported CLI options %j", ({ options }) => {
+    const events: DiagnosticEvent[] = [];
+    const diagnostic = createDiagnostics("127.0.0.1:3102", "guard", false, {
+      argv: [...argv.slice(0, 3), ...options], env: environment, sink: (event) => events.push(event),
+    });
+    expect(diagnostic.enabled).toBe(false);
+    diagnostic.emit("claims", "ok");
+    expect(events).toEqual([]);
+  });
   it("emits nothing by default, despite incoming diagnostic inputs", () => {
     vi.stubEnv("FAIRSWAP_AUTH_DIAGNOSTICS", undefined);
     const sink = vi.spyOn(console, "info");

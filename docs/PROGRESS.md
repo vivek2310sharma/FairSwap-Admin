@@ -204,3 +204,26 @@ New tests cover hosted/nonlocal/wrong-target/untrusted-input activation, exact s
 Known limitations: diagnostics do not expose raw internal errors, associate primary-staff without trusted matching evidence, link proxy and guard merely by adjacency, recover swallowed SDK codes via raw-body capture, verify historical deployment/AAL/session settings, or make concurrent sessions work. No root cause is confirmed or authentication fix attempted. Missing/budget-truncated events are not proof of absent requests. Future local activation/live testing requires a separate assignment after diagnostic review.
 
 Only the nine allowed files comprise this delta: .env.example, README.md, docs/PROGRESS.md, src/lib/auth/diagnostics.ts, src/lib/auth/guard.ts, src/lib/supabase/client.ts, src/lib/supabase/server.ts, src/proxy.ts, tests/auth-diagnostics.test.ts. New-head hosted CI evidence will be recorded in the existing draft PR and outside-repository delivery report after publication, not borrowed from the earlier green run. main/staging must remain unchanged; PR #3 remains draft awaiting diagnostic code review.
+
+## ADMIN-01B-DIAG activation correction (2026-10-05)
+
+Started from 85fcf76ad613d14c41e79bddfe748965fd4549a9 with clean feature/admin-01b-auth, matching draft PR #3 and expected remote main/staging. The prior 181-test record above is historical evidence for that diagnostic revision, not this correction.
+
+Review identified a diagnostic launch-check defect: standalone scanning could ignore attached conflicting hostname values or treat tokens after -- as binding evidence. This is not evidence of authentication bypass, actual exposure or the session-loss cause. Installed Next 16.3.5 CLI source uses Commander -H/--hostname. Parser-only synthetic checks using the installed Commander confirmed both reviewed mixed sequences resolve to 0.0.0.0, while hostname tokens after -- do not set a hostname. No server was started.
+
+The correction accepts only actual Next CLI start/dev argv containing one standalone --hostname/-H with 127.0.0.1 or localhost, optionally one standalone --port/-p with decimal 1–65535, in either order. All attached forms, duplicate aliases, missing/malformed values, positional arguments, -- and other options are rejected. Existing mandatory server opt-in, fixed Test configuration, hosted/CI denial and request-context checks are unchanged. Worker/wrapper argv continues to fail closed. No parser dependency, alternative flag, override or Host-only fallback was added.
+
+Changed files only: src/lib/auth/diagnostics.ts, tests/auth-diagnostics.test.ts, README.md, docs/PROGRESS.md. No guard/mutation/form/client/proxy/endpoint/dependency/lockfile/workflow changes. The existing 181 tests and assertions remain; 30 full-factory regression cases added. Rejected cases explicitly assert disabled plus no emitted output.
+
+Actual local verification used Node v24.15.0 and pnpm 10.12.1 via npm exec --offline --yes --package=pnpm@10.12.1 -- pnpm:
+
+| Command | Actual result |
+| --- | --- |
+| install --frozen-lockfile | PASS; lockfile current, resolution skipped, existing ignored unrs-resolver script warning retained without permission changes |
+| typecheck | PASS; next typegen and tsc --noEmit |
+| lint | PASS; eslint . --max-warnings=0 |
+| test:unit | PASS; 6 files, 211 tests (181 retained + 30 added), no failures/skips; mocked/blocked network |
+| build | PASS; Next 16.3.5, backend configuration and diagnostics explicitly empty, CI=true, telemetry disabled; no live server |
+| git diff --check | PASS |
+
+Hosted new-head CI evidence will be recorded in existing draft PR #3 and the outside-repository correction report after publication. Historical CI is not substituted for this new head. main/staging remain unchanged; no live test, credential access, Supabase call, backend/settings change, deployment or merge. All seven risks remain OPEN / UNVERIFIED, full ADMIN-01B acceptance incomplete, ADMIN-01C NOT STARTED / NOT TESTED. Stop for correction review; no automatic live reproduction.

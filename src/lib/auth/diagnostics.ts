@@ -54,6 +54,27 @@ export function observeResult(diagnostics: Diagnostics, stage: Stage, result: un
   diagnostics.emit(stage, error ? "error" : hasData ? "ok" : "missing", error, hasData ? "none" : "missing-data");
 }
 
+/** Conservative CLI subset: no attached values, positionals, terminator or
+ * other options. Reject rather than approximate Commander's full grammar. */
+function hasLoopbackBinding(argv: string[]): boolean {
+  if (!/[\\/]next[\\/]dist[\\/]bin[\\/]next(?:\.js)?$/.test(argv[1] ?? "") ||
+    !["start", "dev"].includes(argv[2] ?? "")) return false;
+  let hostname = false;
+  let port = false;
+  for (let index = 3; index < argv.length; index += 2) {
+    const option = argv[index];
+    const value = argv[index + 1];
+    if (option === "--hostname" || option === "-H") {
+      if (hostname || !["127.0.0.1", "localhost"].includes(value)) return false;
+      hostname = true;
+    } else if (option === "--port" || option === "-p") {
+      if (port || !/^[1-9]\d{0,4}$/.test(value ?? "") || Number(value) > 65535) return false;
+      port = true;
+    } else return false;
+  }
+  return hostname;
+}
+
 /** Requires server-owned opt-in AND an explicit loopback Next CLI binding.
  * Host/URL alone, NODE_ENV, cookies and diagnostic headers cannot enable it.
  * Internal runtime/sink seams are for isolated tests, never incoming inputs.
@@ -64,12 +85,8 @@ export function createDiagnostics(host: string, group: "guard" | "proxy", forwar
     const env = runtime.env ?? process.env;
     const argv = runtime.argv ?? process.argv;
     const hosted = ["VERCEL", "VERCEL_ENV", "CI", "AWS_LAMBDA_FUNCTION_NAME", "K_SERVICE", "WEBSITE_INSTANCE_ID", "NETLIFY", "CF_PAGES", "FLY_APP_NAME", "RENDER", "RAILWAY_ENVIRONMENT", "DENO_DEPLOYMENT_ID"].some((key) => !!env[key]);
-    const bindingIndex = argv.findIndex((arg) => arg === "--hostname" || arg === "-H");
-    const nextCLI = /[\\/]next[\\/]dist[\\/]bin[\\/]next(?:\.js)?$/.test(argv[1] ?? "") && ["start", "dev"].includes(argv[2] ?? "");
-    const bindings = argv.filter((arg) => arg === "--hostname" || arg === "-H");
     if (env.FAIRSWAP_AUTH_DIAGNOSTICS !== "loopback" || hosted || forwarded || !readAuthConfig(env) ||
-      !/^(127\.0\.0\.1|localhost)(:\d{1,5})?$/.test(host) || !nextCLI || bindings.length !== 1 || bindingIndex < 0 ||
-      !["127.0.0.1", "localhost"].includes(argv[bindingIndex + 1])) return silent;
+      !/^(127\.0\.0\.1|localhost)(:\d{1,5})?$/.test(host) || !hasLoopbackBinding(argv)) return silent;
     const correlationId = randomUUID();
     const sink = runtime.sink ?? localSink;
     let remaining = 32;
