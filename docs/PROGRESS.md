@@ -16,9 +16,9 @@ Authoritative reviewed Web revision: **`8ad67672896a1a11f51009ffddf3bb39ee3cf698
 
 ## Current environment
 
-ADMIN-01A has an accepted local App Router foundation, pinned package manifest/lockfile, configuration validation, and local tests, including the reviewed Node and Vitest corrections. No credentials or real environment files were introduced/read; .env.example contains only empty placeholders. No Supabase SDK/client, hosted database calls, backend changes, Vercel/DNS configuration, pushes, or deployments. The accepted closeout authorises one local foundation commit on feature/admin-01a-foundation with the intact documentation baseline as parent; no merge or movement of main/staging is authorised. Test target is FairSwapTest (`wpppxlnbzqynvhpeuavd`); Production, hosting, and live backend integration remain outside scope. Planned Admin hosts are not configured or verified as operational.
+ADMIN-01A is accepted and merged into remote staging through PR #1, with merge commit **4cafc94d5e5b25f1738ea139f7a324631b435471** (2026-10-05T13:18:24Z). Its parents are documentation baseline 34e80ae894c744cbd2ec4cf99310dc61ac2884dc and accepted foundation 1eaf682b6875d26f06c4056296d22535b2146e96; its tree is d3c1ba349af8ecce671eaedcbbe80dee5f303e34. Remote main remains the documentation baseline. The normal merge did not establish passing CI: zero check runs/statuses existed then.
 
-Antigravity remains the primary implementation environment. Codex's explicitly authorised temporary assignment ends after the accepted foundation's local closeout commit; it does not authorise ADMIN-01B or ADMIN-01C.
+The separate CI-01 assignment authorises chore/admin-ci from verified remote staging, a foundation-checks workflow, local verification, publication, and a PR back to staging, stopping before merge. Antigravity remains the primary implementation environment. Application source, tests, package manifest, lockfile, and build-script permissions remain unchanged. No credentials, real environment files, backend integration, hosting, or deployment are included. ADMIN-01B and ADMIN-01C remain NOT STARTED / NOT TESTED. Effective server-side runtime configuration enforcement remains an ADMIN-01B requirement; all seven backend/security items remain OPEN / UNVERIFIED. Historical records below describe the scope and outcomes at their original time.
 
 ## ADMIN-01
 
@@ -117,3 +117,30 @@ Before closeout edits, actual origin, branch, HEAD, and 7 modified / 17 new unst
 The user authorises explicit staging of those 24 reviewed foundation files and one local commit, feat(admin): add reviewed Test-only application foundation, on feature/admin-01a-foundation. Its parent is the intact documentation baseline 34e80ae894c744cbd2ec4cf99310dc61ac2884dc. Review metadata, correction summary, archives, real environment files, dependencies, generated output, and unrelated files are excluded from the commit. Existing repository-local Git identity, credentials, signing, and hooks are preserved. No merging, pushing, backend operation, hosting configuration, or deployment is authorised.
 
 ADMIN-01B and ADMIN-01C remain NOT STARTED / NOT TESTED. All seven backend/security items remain OPEN / UNVERIFIED. Effective runtime server-side configuration enforcement is still an ADMIN-01B requirement. Production, hosting, live backend integration, staff access, and Web Admin retirement remain out of scope. This acceptance does not complete the whole ADMIN-01 milestone.
+
+## CI-01 foundation checks (2026-10-05)
+
+Created chore/admin-ci from verified remote staging 4cafc94d5e5b25f1738ea139f7a324631b435471 with a clean starting working tree. Remote main was 34e80ae894c744cbd2ec4cf99310dc61ac2884dc. PR #1 was confirmed merged at the recorded merge SHA. No existing workflows or deployment records were returned; the owner's confirmation that no automatic deployment service is connected remains the deployment evidence. No repository settings were changed.
+
+The new .github/workflows/ci.yml runs on pull requests targeting staging/main and pushes to staging/main, without path filters. One quality job, displayed as Admin quality checks, uses ubuntu-24.04 and a 20-minute timeout. Workflow/PR-or-ref concurrency cancels superseded runs. CI=true and NEXT_TELEMETRY_DISABLED=1 are set; deployment configuration is unset and NODE_ENV is not overridden. Frozen installation, typecheck, lint, unit tests, and build are separate steps. No caching, secrets, credential persistence, privileged triggers, deployment environment, or deployment steps are configured.
+
+Official release refs and action.yml inputs were inspected through authenticated read-only GitHub API access. Verified full release commit pins: actions/checkout v7.0.1 at 3d3c42e5aac5ba805825da76410c181273ba90b1; actions/setup-node v7.0.0 at 820762786026740c76f36085b0efc47a31fe5020; pnpm/action-setup v6.1.0 at ea17c68df8912ef543352723c149a84f56e3d413 (the annotated release tag was peeled to its commit). All three use the Node 24 Action runtime. The workflow selects Node 24.15.0 and pnpm 10.12.1 and prints/verifies both.
+
+New local implementing-agent evidence, separate from the historical foundation results:
+
+| Actual command/check | Result |
+| --- | --- |
+| node --version | PASS: v24.15.0 |
+| npm exec --offline --yes --package=pnpm@10.12.1 -- pnpm --version | PASS: 10.12.1 |
+| npm exec --offline --yes --package=pnpm@10.12.1 -- pnpm install --frozen-lockfile | PASS: lockfile up to date, resolution skipped; existing unrs-resolver build script remains ignored |
+| npm exec --offline --yes --package=pnpm@10.12.1 -- pnpm typecheck | PASS: next typegen and tsc --noEmit, exit 0 |
+| npm exec --offline --yes --package=pnpm@10.12.1 -- pnpm lint | PASS: eslint . --max-warnings=0, exit 0 |
+| npm exec --offline --yes --package=pnpm@10.12.1 -- pnpm test:unit | PASS: Vitest 4.1.11, 2 files, all 21 cases passed; no failed/skipped cases |
+| npm exec --offline --yes --package=pnpm@10.12.1 -- pnpm build | PASS: Next.js 16.3.5 compile, TypeScript and static / and /_not-found, exit 0 |
+| Node stdin harness using installed js-yaml 4.3.2 | PASS: YAML parsing and assertions for triggers, permissions, concurrency, runner, timeout, action refs/inputs, commands and prohibited configuration |
+| Official pinned action.yml input inspection | PASS: all selected inputs exist; no actionlint executable was available, so actionlint was not run |
+| git diff --check; local documentation-link and credential-pattern checks | PASS; no credential values found in the three changed files |
+
+Local command processes used CI=true and NEXT_TELEMETRY_DISABLED=1, with application deployment configuration unset. An initial probe for the yaml module found it unavailable; syntax validation used the existing js-yaml dependency instead, without installing validation tooling. No application/test/configuration/dependency/lockfile changes were needed. The existing build-script allowlist and fetch protections are preserved. Historical ESLint 9/transitive deprecation limitations remain recorded above; this frozen install emitted the ignored unrs-resolver warning, which was not bypassed.
+
+Hosted GitHub Actions evidence for the final CI PR head will be recorded in the PR/report after execution, including the PR merge-ref checkout SHA. These local results do not claim hosted success. CI-01 stops before merge. All seven backend/security items remain OPEN / UNVERIFIED; ADMIN-01B/01C remain NOT STARTED / NOT TESTED. Build-time configuration capture remains a limitation; effective server-side runtime enforcement is still an ADMIN-01B requirement. No authentication, RLS, backend integration, deployment or production readiness is established.
