@@ -227,3 +227,24 @@ Actual local verification used Node v24.15.0 and pnpm 10.12.1 via npm exec --off
 | git diff --check | PASS |
 
 Hosted new-head CI evidence will be recorded in existing draft PR #3 and the outside-repository correction report after publication. Historical CI is not substituted for this new head. main/staging remain unchanged; no live test, credential access, Supabase call, backend/settings change, deployment or merge. All seven risks remain OPEN / UNVERIFIED, full ADMIN-01B acceptance incomplete, ADMIN-01C NOT STARTED / NOT TESTED. Stop for correction review; no automatic live reproduction.
+## Diagnostic proxy Host consistency correction (2026-10-05)
+
+Starting head 5a8f7517850772d22fcf30abd4140ade24123a85, clean feature/admin-01b-auth, draft PR #3 and remote main/staging verified against the assignment. Antigravity remains primary. Only isolated correction/testing and branch publication authorized; no launcher, application listener, cookie-free probe or owner sign-in under this task.
+
+Historical live gate preserved: HTTP 403, access denied; three validated guard events (configuration OK -> claims missing -> final denied); no proxy-group events observed; application stopped before staff authentication. This does not prove proxy nonexecution, bypass or session-loss cause.
+
+Before production-code edits, a new isolated test used the real installed Next.js 16.3.5 NextRequest and production proxy with SDK doubles: URL http://127.0.0.1:3102/admin/access; original Host and x-forwarded-host both 127.0.0.1:3102, x-forwarded-for 127.0.0.1. Actual nextUrl.host was localhost:3102. The proxy's getClaims ran exactly once but no diagnostic output appeared. The requested targeted command (npm exec --offline --yes --package=pnpm@10.12.1 -- pnpm test:unit -- tests/auth-diagnostics.test.ts -t 'real NextRequest forwarding exposes') forwarded a literal --, so Vitest actually ran the full suite: 212 passed in 6 files, including the before-correction reproduction. This is isolated reproduction, not live evidence.
+
+Applied only request.headers.get("host") ?? "" as proxy requestDiagnostics input. No changes to cookie security calculation, SDK refresh, response/request propagation, headers, diagnostic schema/CLI grammar or forwarding validation. No alias equivalence or normalized-URL fallback. Original Host remains untrusted; all explicit server/Test/loopback/hosting prerequisites stay mandatory.
+
+Regression coverage includes schema-valid proxy output for the realistic normalized request, missing/malformed/nonlocal Host, mismatched forwarded host (including port and localhost alias), nonlocal forwarded-for, Forwarded headers and production-proxy prerequisite denials. Existing proxy test fixtures gained explicit Host headers to represent real HTTP while retaining all behavior, leakage and sink-failure assertions. All previous 211 cases retained; 17 new cases added. Network remains mocked/blocked; no real configuration or credentials used. Only README.md, docs/PROGRESS.md, src/proxy.ts and tests/auth-diagnostics.test.ts changed.
+| New local verification (Node v24.15.0 / pnpm 10.12.1) | Actual result |
+| --- | --- |
+| npm exec --offline --yes --package=pnpm@10.12.1 -- pnpm install --frozen-lockfile | PASS; current lockfile, resolution skipped; existing ignored unrs-resolver script warning retained |
+| Same prefix: pnpm typecheck | PASS; next typegen and tsc --noEmit |
+| Same prefix: pnpm lint | PASS; eslint . --max-warnings=0 |
+| Same prefix: pnpm test:unit | PASS; 6 files, 228 tests (211 retained + 17 new), no failures/skips |
+| Same prefix: pnpm build | PASS; Next 16.3.5; backend configuration and diagnostic flag explicitly empty, CI=true, telemetry disabled; no server launch |
+| git diff --check | PASS |
+
+Scope inspection confirms only four allowed files. All non-diagnostic proxy code is unchanged; guards, mutations, SDK clients, endpoint, dependencies, lockfile, workflow and diagnostic schema/CLI activation implementation are unchanged. Final new-head hosted CI will be observed with bounded waits and recorded separately in draft PR #3 / outside-repository report. Prior green runs are not validation of this new head. Remaining live activation uncertainty requires separately authorized work; do not start the launcher. All seven risks OPEN / UNVERIFIED, full ADMIN-01B acceptance incomplete, ADMIN-01C NOT STARTED / NOT TESTED. main/staging unchanged; no live Supabase call, credential read, backend/settings change, deployment or merge.

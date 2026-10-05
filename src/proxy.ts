@@ -4,7 +4,7 @@ import { requestDiagnostics, observeResult } from "@/lib/auth/diagnostics";
 
 /** Refresh only. Entry-point guards remain authoritative; no policy-error bypass. */
 export async function proxy(request: NextRequest) {
-  const diagnostics = requestDiagnostics(request.nextUrl.host, "proxy", request.headers);
+  const diagnostics = requestDiagnostics(request.headers.get("host") ?? "", "proxy", request.headers);
   const outgoing = new Map<string, CookieWrite>();
   const responseHeaders = new Map<string, string>();
   const client = createAdminClient({

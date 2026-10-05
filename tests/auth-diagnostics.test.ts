@@ -74,6 +74,56 @@ beforeEach(() => {
 afterEach(() => { process.argv = initialArgv; vi.restoreAllMocks(); });
 
 describe("local server-owned activation", () => {
+  it("real NextRequest forwarding preserves original Host for proxy diagnostics", async () => {
+    const sink = vi.spyOn(console, "info").mockImplementation(() => {});
+    const f = fixture(); requestSDK.create.mockReturnValue(f.typed);
+    const request = new NextRequest("http://127.0.0.1:3102/admin/access", { headers: {
+      host: "127.0.0.1:3102", "x-forwarded-host": "127.0.0.1:3102", "x-forwarded-for": "127.0.0.1",
+    } });
+    expect(request.nextUrl.host).toBe("localhost:3102");
+    expect(request.headers.get("host")).toBe("127.0.0.1:3102");
+    expect(request.headers.get("x-forwarded-host")).toBe("127.0.0.1:3102");
+    const response = await proxy(request);
+    expect(f.client.auth.getClaims).toHaveBeenCalledExactlyOnceWith();
+    expect(response.headers.get("cache-control")).toBe(PRIVATE_CACHE);
+    const events = sink.mock.calls.map((call) => diagnosticEventSchema.parse(JSON.parse(call[1] as string)));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ group: "proxy", stage: "proxy-claims", outcome: "ok", category: "none", fixture: "UNKNOWN" });
+    expect(JSON.stringify(events)).not.toContain(SENTINEL);
+  });
+  it.each([
+    {}, { host: "" }, { host: "example.invalid" }, { host: "127.0.0.1.evil.example" },
+    { host: "127.0.0.1:3102/invalid" }, { host: "0.0.0.0:3102" },
+    { host: "127.0.0.1:3102", "x-forwarded-host": "localhost:3102" },
+    { host: "127.0.0.1:3102", "x-forwarded-host": "127.0.0.1:3103" },
+    { host: "127.0.0.1:3102", "x-forwarded-for": "198.51.100.1" },
+    { host: "127.0.0.1:3102", "x-forwarded-for": "127.0.0.1, 198.51.100.1" },
+    { host: "127.0.0.1:3102", forwarded: "host=127.0.0.1:3102" },
+  ].map((headers) => ({ headers })))("proxy cannot enable diagnostics with rejected original headers %j", async ({ headers }) => {
+    const sink = vi.spyOn(console, "info").mockImplementation(() => {});
+    const f = fixture(); requestSDK.create.mockReturnValue(f.typed);
+    const requestHeaders = new Headers();
+    Object.entries(headers).forEach(([name, value]) => { if (value !== undefined) requestHeaders.set(name, value); });
+    const response = await proxy(new NextRequest("http://127.0.0.1:3102/admin/access", { headers: requestHeaders }));
+    expect(sink).not.toHaveBeenCalled();
+    expect(f.client.auth.getClaims).toHaveBeenCalledExactlyOnceWith();
+    expect(response.headers.get("cache-control")).toBe(PRIVATE_CACHE);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it.each(["off", "hosted", "ci", "wrong-target", "ambiguous-cli"])("proxy original Host cannot override prerequisite %s", async (kind) => {
+    if (kind === "off") vi.stubEnv("FAIRSWAP_AUTH_DIAGNOSTICS", undefined);
+    if (kind === "hosted") vi.stubEnv("VERCEL", "1");
+    if (kind === "ci") vi.stubEnv("CI", "true");
+    if (kind === "wrong-target") vi.stubEnv("FAIRSWAP_SUPABASE_URL", "https://wrong-project.supabase.co");
+    if (kind === "ambiguous-cli") process.argv = [...argv, "--hostname=0.0.0.0"];
+    const sink = vi.spyOn(console, "info").mockImplementation(() => {});
+    const response = await proxy(new NextRequest("http://127.0.0.1:3102/admin/access", { headers: {
+      host: "127.0.0.1:3102", "x-forwarded-host": "127.0.0.1:3102", "x-forwarded-for": "127.0.0.1",
+    } }));
+    expect(sink).not.toHaveBeenCalled();
+    expect(response.headers.get("cache-control")).toBe(PRIVATE_CACHE);
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it.each([
     { options: ["--hostname", "127.0.0.1", "--port", "3102"], command: "start" },
     { options: ["-p", "3102", "-H", "localhost"], command: "start" },
@@ -260,7 +310,7 @@ describe("guard and entry-point parity", () => {
       if (kind === "thrown") throw error;
       return { data: kind === "ok" ? { claims: { secret: SENTINEL } } : null, error: kind === "returned" ? error : null };
     } } }));
-    const request = new NextRequest("http://127.0.0.1:3102/admin?diagnostics=true", { headers: { "x-diagnostic-id": SENTINEL } });
+    const request = new NextRequest("http://127.0.0.1:3102/admin?diagnostics=true", { headers: { host: "127.0.0.1:3102", "x-diagnostic-id": SENTINEL } });
     const response = await proxy(request);
     expect(request.cookies.get(`${ADMIN_COOKIE_NAME}.0`)?.value).toBe(SENTINEL); expect(response.cookies.get(`${ADMIN_COOKIE_NAME}.0`)?.value).toBe(SENTINEL);
     expect(response.headers.get("cache-control")).toBe(PRIVATE_CACHE); expect(response.headers.get("set-cookie")).not.toContain("Domain=");
@@ -271,13 +321,13 @@ describe("guard and entry-point parity", () => {
   it("proxy sink failure cannot prevent downstream cookie propagation", async () => {
     vi.spyOn(console, "info").mockImplementation(() => { throw new Error(SENTINEL); });
     requestSDK.create.mockImplementation((_url, _key, options: { cookies: CookieAdapter }) => ({ auth: { getClaims: async () => { options.cookies.setAll([{ name: ADMIN_COOKIE_NAME, value: SENTINEL, options: {} }], {}); return { data: null, error: { code: "bad_jwt", status: 401 } }; } } }));
-    const response = await proxy(new NextRequest("http://127.0.0.1:3102/admin"));
+    const response = await proxy(new NextRequest("http://127.0.0.1:3102/admin", { headers: { host: "127.0.0.1:3102" } }));
     expect(response.cookies.get(ADMIN_COOKIE_NAME)?.value).toBe(SENTINEL); expect(response.headers.get("cache-control")).toBe(PRIVATE_CACHE);
   });
   it("proxy query/header/cookie inputs cannot activate diagnostics without opt-in", async () => {
     vi.stubEnv("FAIRSWAP_AUTH_DIAGNOSTICS", undefined);
     const sink = vi.spyOn(console, "info");
-    await proxy(new NextRequest("http://127.0.0.1:3102/admin?FAIRSWAP_AUTH_DIAGNOSTICS=loopback", { headers: { "x-auth-diagnostics": "loopback", cookie: "FAIRSWAP_AUTH_DIAGNOSTICS=loopback" } }));
+    await proxy(new NextRequest("http://127.0.0.1:3102/admin?FAIRSWAP_AUTH_DIAGNOSTICS=loopback", { headers: { host: "127.0.0.1:3102", "x-auth-diagnostics": "loopback", cookie: "FAIRSWAP_AUTH_DIAGNOSTICS=loopback" } }));
     expect(sink).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
   });
   it("client construction exceptions retain existing failure behavior", async () => {
