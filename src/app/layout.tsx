@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FairSwap Admin — TEST",
+  title: "FairSwap Admin",
   description: "FairSwap staff operations with verified MFA and role-based access.",
   robots: { index: false, follow: false },
 };

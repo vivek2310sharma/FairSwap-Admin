@@ -6,6 +6,7 @@ describe("foundation target validation (synthetic inputs only)", () => {
     {},
     { deploymentEnvironment: "", supabaseUrl: "" },
     { deploymentEnvironment: "test" },
+    { deploymentEnvironment: "production" },
     { supabaseUrl: TEST_SUPABASE_URL },
   ])("keeps absent or incomplete configuration safely unconfigured: %j", (input) => {
     expect(validateFoundationConfig(input)).toEqual({ status: "unconfigured" });
