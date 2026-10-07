@@ -48,7 +48,7 @@ export default async function AdminCategoriesPage() {
         </Link>
         <h1 className="mt-2 text-2xl font-bold text-gray-900">Category Administration</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Manage marketplace categories and their structured attribute schemas.
+          Create and activate marketplace categories. Attribute schemas are read-only; schema editing is unavailable.
         </p>
       </div>
 

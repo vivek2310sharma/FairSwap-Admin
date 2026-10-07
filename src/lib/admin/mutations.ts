@@ -53,8 +53,8 @@ export async function adminMutation(input: unknown, origin: string | null, host:
         const row = await client.from("listings").select("id,seller_id,status,revision").eq("id", value.listingId).maybeSingle();
         if (row.error || !row.data || row.data.seller_id === access.userId) return failed;
         if (row.data.revision !== value.revision || row.data.status !== value.status) return { error: "The listing changed. Refresh and review it again." };
-        // This precheck improves stale-review feedback; the existing RPC has no atomic expected-revision argument.
-        rpc = "moderate_listing"; args = { listing_id: value.listingId, action: value.action, reason: value.reason || null }; break;
+        // Feedback precheck only; the approved RPC repeats revision/status validation under the listing lock.
+        rpc = "moderate_listing_reviewed"; args = { listing_id: value.listingId, action: value.action, reason: value.reason || null, expected_revision: value.revision, expected_status: value.status }; break;
       }
       case "user-status": {
         if (value.targetUserId === access.userId) return { error: "You cannot change your own account status." };
@@ -74,6 +74,7 @@ export async function adminMutation(input: unknown, origin: string | null, host:
       case "location": rpc = "admin_manage_location"; args = { action: value.action, city_id: value.cityId, locality_id: value.localityId, name: value.name, state: value.state, slug: value.slug, is_active: value.active }; break;
     }
     const result = await client.rpc(rpc, args);
+    if (value.operation === "moderate" && result.error?.code === "PT409") return { error: "The listing changed. Refresh and review it again." };
     if (result.error) return result.error.code === "23505" ? { error: "That value already exists. Refresh and check for duplicates." } : failed;
     if (["moderate", "category", "location"].includes(value.operation) && result.data?.success !== true) return failed;
     if (value.operation === "support-reply" && !id.safeParse(result.data).success) return failed;

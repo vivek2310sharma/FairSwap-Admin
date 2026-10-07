@@ -37,7 +37,7 @@ function fixture() {
     rpc: vi.fn(async (name: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: unknown }> => {
       if (name === "has_current_policy_acceptance") return { data: true, error: null };
       if (name === "admin_search_users") return { data: [{ user_id: target, role: null, account_status: "active" }], error: null };
-      if (name === "moderate_listing") { rows.listings.data = { id: target, status: args?.action === "reject" ? "rejected" : args?.action === "remove" ? "removed" : "active" }; return { data: { success: true }, error: null }; }
+      if (name === "moderate_listing_reviewed") { rows.listings.data = { id: target, status: args?.action === "reject" ? "rejected" : args?.action === "remove" ? "removed" : "active" }; return { data: { success: true }, error: null }; }
       if (["admin_manage_category", "admin_manage_location"].includes(name)) return { data: { success: true }, error: null };
       if (["admin_reply_support_ticket", "admin_add_ticket_internal_note"].includes(name)) return { data: target, error: null };
       return { data: null, error: null };
@@ -58,9 +58,9 @@ beforeEach(() => {
 });
 const moderate = { operation: "moderate", listingId: target, action: "approve", revision: 2, status: "pending_review" };
 const cases = [
-  [moderate, "moderate_listing"],
-  [{ ...moderate, action: "reject", reason: "Synthetic review reason" }, "moderate_listing"],
-  [{ ...moderate, action: "remove", reason: "Synthetic removal reason" }, "moderate_listing"],
+  [moderate, "moderate_listing_reviewed"],
+  [{ ...moderate, action: "reject", reason: "Synthetic review reason" }, "moderate_listing_reviewed"],
+  [{ ...moderate, action: "remove", reason: "Synthetic removal reason" }, "moderate_listing_reviewed"],
   [{ operation: "user-status", targetUserId: target, newStatus: "suspended", expectedStatus: "active", reason: "Synthetic moderation reason" }, "admin_update_user_account_status"],
   [{ operation: "assign-role", targetUserId: target, role: "moderator" }, "admin_assign_staff_role"],
   [{ operation: "revoke-role", targetUserId: target }, "admin_revoke_staff_role"],
@@ -71,12 +71,27 @@ const cases = [
   [{ operation: "ticket-status", ticketId: target, status: "resolved", priority: "normal", assignedTo: null }, "admin_update_ticket_status"],
   [{ operation: "category", action: "create", categoryId: null, name: "Synthetic category", slug: "synthetic-category", description: null, icon: null, sortOrder: 0, active: true }, "admin_manage_category"],
   [{ operation: "location", action: "create_city", cityId: null, localityId: null, name: "Synthetic city", state: "Synthetic state", slug: "synthetic-city", active: true }, "admin_manage_location"],
+  [{ operation: "user-status", targetUserId: target, newStatus: "active", expectedStatus: "suspended", reason: "Synthetic restoration reason" }, "admin_update_user_account_status"],
+  [{ operation: "category", action: "update", categoryId: target, name: null, slug: null, description: null, icon: null, sortOrder: null, active: false }, "admin_manage_category"],
+  [{ operation: "location", action: "update_city", cityId: target, localityId: null, name: null, state: null, slug: null, active: false }, "admin_manage_location"],
+  [{ operation: "location", action: "create_locality", cityId: target, localityId: null, name: "Synthetic locality", state: null, slug: "synthetic-locality", active: true }, "admin_manage_location"],
+  [{ operation: "location", action: "update_locality", cityId: null, localityId: target, name: null, state: null, slug: null, active: false }, "admin_manage_location"],
 ] as const;
 
 describe("migrated RPC integrations", () => {
   it.each(cases)("invokes the existing authorized backend operation %j", async (input, rpc) => {
+    if (input.operation === "user-status" && "newStatus" in input && input.newStatus === "active") f.client.rpc.mockImplementation(async name => ({ data: name === "has_current_policy_acceptance" ? true : name === "admin_search_users" ? [{user_id:target,account_status:"suspended",role:null}] : null,error:null }));
     expect(await adminMutation(input,origin,host,factory)).toMatchObject({ success: true });
     expect(f.client.rpc).toHaveBeenCalledWith(rpc,expect.any(Object)); expect(fetch).not.toHaveBeenCalled();
+  });
+  it.each(cases.flatMap(([input,rpc]) => STAFF_ROLES.map(role => ({input,rpc,role}))))("enforces the server role boundary for $role / $rpc", async ({input,rpc,role}) => {
+    f.rows.staff_roles.data = {role};
+    if (input.operation === "user-status" && "newStatus" in input && input.newStatus === "active") f.client.rpc.mockImplementation(async name => ({ data: name === "has_current_policy_acceptance" ? true : name === "admin_search_users" ? [{user_id:target,account_status:"suspended",role:null}] : null,error:null }));
+    const permitted = role === "administrator" || (role === "moderator" && ["moderate","user-status","resolve-report"].includes(input.operation)) || (role === "support_agent" && ["support-reply","ticket-status"].includes(input.operation)) || (role === "content_editor" && input.operation === "category");
+    const result = await adminMutation(input,origin,host,factory);
+    expect(result.success === true).toBe(permitted);
+    expect(f.client.rpc.mock.calls.some(([name]) => name === rpc)).toBe(permitted);
+    expect(fetch).not.toHaveBeenCalled();
   });
   it.each(cases)("denies %j before writes for an AAL1 caller", async (input, rpc) => {
     f.claims.aal = "aal1";
@@ -114,11 +129,26 @@ describe("migrated RPC integrations", () => {
     expect((await adminMutation(moderate,origin,host,factory)).error).toBeDefined();
     f.rows.listings.data = { id: target, seller_id: target, revision: 3, status: "pending_review" };
     expect((await adminMutation(moderate,origin,host,factory)).error).toContain("changed");
-    expect(f.client.rpc.mock.calls.some(([name]) => name === "moderate_listing")).toBe(false);
+    expect(f.client.rpc.mock.calls.some(([name]) => name === "moderate_listing_reviewed")).toBe(false);
   });
   it("keeps an unconfirmed final moderation state failed", async () => {
     f.client.rpc.mockImplementation(async name => ({ data: name === "has_current_policy_acceptance" ? true : { success: true },error:null }));
     expect((await adminMutation(moderate,origin,host,factory)).error).toContain("final state");
+  });
+  it("binds the reviewed revision/status to the additive RPC and rejects repeats", async () => {
+    expect((await adminMutation(moderate,origin,host,factory)).success).toBe(true);
+    expect(f.client.rpc).toHaveBeenCalledWith("moderate_listing_reviewed",{listing_id:target,action:"approve",reason:null,expected_revision:2,expected_status:"pending_review"});
+    expect((await adminMutation(moderate,origin,host,factory)).error).toContain("changed");
+    expect(f.client.rpc.mock.calls.filter(([name]) => name === "moderate_listing_reviewed")).toHaveLength(1);
+  });
+  it.each(["PT409","PGRST202"])("contains %s without a legacy fallback or automatic retry", async code => {
+    f.client.rpc.mockImplementation(async name => ({data:name === "has_current_policy_acceptance" ? true : null,error:name === "has_current_policy_acceptance" ? null : {code,message:"SECRET_SENTINEL"}}));
+    const result=await adminMutation(moderate,origin,host,factory);
+    expect(result.success).not.toBe(true); expect(result.error).toBeDefined();
+    if(code === "PT409") expect(result.error).toContain("Refresh");
+    expect(JSON.stringify(result)).not.toContain("SECRET_SENTINEL");
+    expect(f.client.rpc.mock.calls.filter(([name]) => name === "moderate_listing_reviewed")).toHaveLength(1);
+    expect(f.client.rpc.mock.calls.some(([name]) => name === "moderate_listing")).toBe(false);
   });
   it("does not expose SDK errors or consider a false success envelope successful", async () => {
     f.client.rpc.mockImplementation(async name => name === "has_current_policy_acceptance" ? { data: true,error:null } : { data: { success: false },error:null });

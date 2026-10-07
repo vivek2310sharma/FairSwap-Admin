@@ -8,8 +8,8 @@ import { ProcessDeletionButton } from "@/components/communication/ProcessDeletio
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy & GDPR Fulfillment — FairSwap Admin",
-  description: "Fulfill data subject access requests and account deletions.",
+  title: "Privacy Requests — FairSwap Admin",
+  description: "Review privacy requests and manage status. Export fulfillment and deletion are unavailable.",
 };
 
 export default async function AdminPrivacyPage({
@@ -105,7 +105,7 @@ export default async function AdminPrivacyPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Privacy & GDPR Requests</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Process data export requests and orchestrate account deletion and anonymization workflows.
+            Review requests and update their status. Export fulfillment and account deletion are unavailable; status changes do not perform either operation.
           </p>
         </div>
       </div>
