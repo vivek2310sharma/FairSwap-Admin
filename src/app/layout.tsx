@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "FairSwap Admin — TEST",
-  description: "Foundation only. Staff workflows are not implemented.",
+  description: "FairSwapTest staff operations with verified MFA and role-based access.",
   robots: { index: false, follow: false },
 };
 

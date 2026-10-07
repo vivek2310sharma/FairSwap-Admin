@@ -1,4 +1,5 @@
 import { ListingPhoto } from "./listing-photo";
+import Link from "next/link";
 import type { PendingQueue } from "@/lib/listings/pending";
 import { relationName } from "@/lib/listings/pending";
 
@@ -25,6 +26,7 @@ export function PendingListings({ queue }: { queue: Exclude<PendingQueue, { stat
         <div><dt>Submitted (India time)</dt><dd>{date(listing.submitted_at)}</dd></div>
         <div><dt>Photos</dt><dd>{listing.listing_media.filter((photo) => photo.processing_status === "ready").length} ready / {listing.listing_media.length} submitted</dd></div>
       </dl>
+      <p><Link href={`/admin/listings/${listing.id}`} prefetch={false}>Open full review and moderation →</Link></p>
       <details><summary>View details and photos</summary><div className="listing-details">
         <p className="listing-description">{listing.description || "No description provided."}</p>
         <dl className="listing-summary">

@@ -11,6 +11,14 @@ body {
   margin: 0;
 }
 
+.admin-nav { padding: 1rem 2rem; border-bottom: 1px solid #cbd5e1; background: white; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+.admin-nav nav { display: flex; flex-wrap: wrap; gap: .9rem; width: 100%; }
+.admin-nav a { color: #065f46; }
+.admin-nav form { display: flex; gap: 1rem; }
+.admin-nav button { cursor: pointer; color: #065f46; }
+.auth-shell:has(.admin-overview) { max-width: 76rem; }
+fieldset { min-width: 0; }
+
 .auth-shell { max-width: 36rem; margin: 3rem auto; padding: 1.5rem; }
 .auth-shell h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 1rem; }
 .auth-shell h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 1rem; }

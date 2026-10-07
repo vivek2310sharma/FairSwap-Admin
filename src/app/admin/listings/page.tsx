@@ -15,7 +15,7 @@ export default async function PendingListingsPage() {
   }
   return <main className="queue-shell">
     <header className="queue-header"><div><Link href="/admin">← Staff home</Link><p className="listing-status">FairSwap Admin · TEST</p><h1>Pending listings</h1>
-      <p>Oldest submissions first. Read-only review; decisions are not available yet.</p></div>
+      <p>Oldest submissions first. Open a listing for full review and available moderation decisions.</p></div>
       <RefreshQueue /></header>
     <PendingListings queue={queue} />
     <div className="queue-session"><SessionControls /></div>

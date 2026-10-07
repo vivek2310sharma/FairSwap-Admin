@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { MfaForms, SessionControls } from "@/components/auth-forms";
 import { requestClient } from "@/lib/supabase/server";
-import { staffAccess } from "@/lib/auth/guard";
+import { staffAccess, STAFF_ROLES } from "@/lib/auth/guard";
 import { ownFactors } from "@/lib/auth/mutations";
 
 export const dynamic = "force-dynamic";
 export default async function MfaPage() {
   const client = await requestClient();
   if (!client) return <main className="auth-shell"><h1>Test authentication configuration is unavailable.</h1></main>;
-  const access = await staffAccess(client, false);
+  const access = await staffAccess(client, false, STAFF_ROLES);
   if (!access.allowed && access.reason === "sign-in") redirect("/auth/sign-in");
   if (!access.allowed) return <main className="auth-shell"><h1>Staff verification unavailable or access denied.</h1><SessionControls /></main>;
   if (access.aal === "aal2") redirect("/admin");

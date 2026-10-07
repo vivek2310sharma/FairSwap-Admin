@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { readAuthConfig } from "./runtime-config";
-import { staffAccess } from "./guard";
+import { staffAccess, STAFF_ROLES } from "./guard";
 import { signInSchema, verificationSchema, sameOriginMutation, safeAdminRedirect, type AuthState } from "./inputs";
 import { requestClient } from "@/lib/supabase/server";
 import type { AdminClient } from "@/lib/supabase/client";
@@ -47,7 +47,7 @@ export async function authMutation(
       const result = await client.auth.signInWithPassword(signIn.data);
       if (result.error) return { error: "Sign-in failed. Check your email and password or try again." };
     }
-    const access = await staffAccess(client, operation === "recheck");
+    const access = await staffAccess(client, operation === "recheck", STAFF_ROLES);
     if (!access.allowed) {
       if (operation === "sign-in") await client.auth.signOut({ scope: "local" });
       return failure;
@@ -76,7 +76,7 @@ export async function authMutation(
       const result = await client.auth.mfa.challengeAndVerify(verification.data);
       if (result.error) return { error: "MFA verification failed. Check your code or session and try again." };
       // Enrolment or a successful-looking response is insufficient: verify the new JWT.
-      const elevated = await staffAccess(client, false);
+      const elevated = await staffAccess(client, false, STAFF_ROLES);
       if (!elevated.allowed || elevated.aal !== "aal2") return failure;
       return { redirectTo: safeAdminRedirect(form.get("next")) };
     }

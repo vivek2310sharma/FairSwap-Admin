@@ -242,7 +242,7 @@ describe("actual entry points and cookie propagation", () => {
     expect(result.error).toBeDefined(); expect(JSON.stringify(result)).not.toContain("synthetic");
   });
   it("direct MFA action cannot grant access from a submitted role/AAL", async () => {
-    f.claims.aal = "aal1"; f.staff.data.role = "support_agent";
+    f.claims.aal = "aal1"; f.staff.data.role = "user";
     expect((await verifyAction({}, form({ factorId, code: "123456", role: "administrator", aal: "aal2" }))).error).toBeDefined();
     expect(f.client.auth.mfa.challengeAndVerify).not.toHaveBeenCalled();
   });

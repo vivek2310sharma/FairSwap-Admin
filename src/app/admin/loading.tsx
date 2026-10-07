@@ -1,1 +1,1 @@
-export default function Loading() { return <p role="status">Verifying staff access…</p>; }
+export default function AdminLoading() { return <section className="queue-message" role="status" aria-busy="true">Loading Test Admin…</section>; }

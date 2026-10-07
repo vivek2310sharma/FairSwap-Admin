@@ -7,7 +7,9 @@ import type { AdminClient } from "@/lib/supabase/client";
 import { diagnosticsFor, observeResult, sdkError } from "./diagnostics";
 
 export type Denial = "configuration" | "sign-in" | "denied" | "verification-error" | "mfa" | "policy-required" | "policy-error";
-export type StaffAccess = { allowed: true; userId: string; role: "administrator" | "moderator"; aal: "aal1" | "aal2" } |
+export const STAFF_ROLES = ["administrator", "moderator", "support_agent", "content_editor"] as const;
+export type StaffRole = typeof STAFF_ROLES[number];
+export type StaffAccess = { allowed: true; userId: string; role: StaffRole; aal: "aal1" | "aal2" } |
   { allowed: false; reason: Denial };
 const claimsSchema = z.object({
   sub: z.string().uuid(),
@@ -21,7 +23,7 @@ const claimsSchema = z.object({
 /** getClaims verifies the signature; getUser additionally checks the Auth identity.
  * Neither cookie-supplied user metadata nor getSession().user grants access.
  */
-export async function staffAccess(client: AdminClient, protectedAccess: boolean): Promise<StaffAccess> {
+export async function staffAccess(client: AdminClient, protectedAccess: boolean, permittedRoles: readonly StaffRole[] = ["administrator", "moderator"]): Promise<StaffAccess> {
   const diagnostics = diagnosticsFor(client);
   const deny = (reason: Denial): StaffAccess => {
     diagnostics.emit("final", "denied");
@@ -63,12 +65,12 @@ export async function staffAccess(client: AdminClient, protectedAccess: boolean)
     observeResult(diagnostics, stage, staff);
     if (account.error || staff.error) return deny("verification-error");
     stage = "eligibility";
-    if (account.data?.account_status !== "active" || !["administrator", "moderator"].includes(staff.data?.role)) {
+    if (account.data?.account_status !== "active" || !STAFF_ROLES.includes(staff.data?.role) || !permittedRoles.includes(staff.data?.role)) {
       diagnostics.emit(stage, "denied", undefined, "ineligible");
       return deny("denied");
     }
     diagnostics.emit(stage, "ok");
-    const role = staff.data?.role as "administrator" | "moderator";
+    const role = staff.data?.role as StaffRole;
     if (protectedAccess) {
       stage = "mfa";
       if (parsed.data.aal !== "aal2") {
@@ -106,12 +108,12 @@ export async function staffAccess(client: AdminClient, protectedAccess: boolean)
 }
 
 /** Each protected entry point calls this, independent of proxy/layout navigation. */
-export async function requireStaffAccess(): Promise<StaffAccess> {
+export async function requireStaffAccess(permittedRoles: readonly StaffRole[] = ["administrator", "moderator"]): Promise<StaffAccess> {
   if (!readAuthConfig()) return { allowed: false, reason: "configuration" };
   try {
     const client = await requestClient();
     if (!client) return { allowed: false, reason: "configuration" };
-    return staffAccess(client, true);
+    return staffAccess(client, true, permittedRoles);
   } catch {
     return { allowed: false, reason: "verification-error" };
   }
