@@ -9,6 +9,9 @@ import { parseReportEvidence } from "@/lib/admin/evidence";
 import { safeAdminCall } from "@/lib/admin/client-result";
 import { staffAccess, STAFF_ROLES } from "@/lib/auth/guard";
 import { authMutation } from "@/lib/auth/mutations";
+import { loadSupportUser } from "@/lib/admin/support-user";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 import { TEST_SUPABASE_URL } from "@/lib/config";
 import type { AdminClient } from "@/lib/supabase/client";
 
@@ -172,5 +175,25 @@ describe("evidence and client-result contracts", () => {
     expect(await safeAdminCall(async () => ({}))).toHaveProperty("error");
     const result = await safeAdminCall(async () => { throw new Error("SECRET_SENTINEL"); });
     expect(JSON.stringify(result)).not.toContain("SECRET_SENTINEL"); expect(result.success).not.toBe(true);
+  });
+});
+
+describe("support account-status compatibility", () => {
+  it("reads the existing user_accounts contract instead of an absent profiles column", async () => {
+    f.rows.profiles = { data: { id:target,display_name:"Synthetic person" },error:null };
+    f.rows.user_accounts = { data: { user_id:target,account_status:"suspended" },error:null };
+    expect(await loadSupportUser(f.typed as unknown as SupabaseClient<Database>,target)).toEqual({ profile:{ id:target,display_name:"Synthetic person" },accountStatus:"suspended" });
+    const calls=f.client.from.mock.results;
+    expect(calls[0].value.select).toHaveBeenCalledWith("id,display_name"); expect(calls[1].value.select).toHaveBeenCalledWith("user_id,account_status");
+  });
+  it("preserves unavailable observations and rejects mismatched rows without leaking failures", async () => {
+    f.rows.profiles = { data: { id:actor,display_name:"Wrong person" },error:null };
+    f.rows.user_accounts = { data:null,error:{ message:"SECRET_SENTINEL" } };
+    const result=await loadSupportUser(f.typed as unknown as SupabaseClient<Database>,target);
+    expect(result).toEqual({ profile:null,accountStatus:null }); expect(JSON.stringify(result)).not.toContain("SECRET_SENTINEL");
+  });
+  it("does not query a deleted or malformed user reference", async () => {
+    for(const id of [null,"malformed"]) expect(await loadSupportUser(f.typed as unknown as SupabaseClient<Database>,id)).toEqual({ profile:null,accountStatus:null });
+    expect(f.client.from).not.toHaveBeenCalled();
   });
 });

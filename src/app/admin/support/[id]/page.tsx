@@ -5,6 +5,7 @@ import { StaffSupportReplyForm } from "@/components/communication/StaffSupportRe
 import { ChevronLeft, Lock, Shield } from "lucide-react";
 import type { Metadata } from "next";
 import { z } from "zod";
+import { loadSupportUser } from "@/lib/admin/support-user";
 
 export const metadata: Metadata = {
   title: "Support Ticket Detail — FairSwap Admin",
@@ -59,11 +60,7 @@ export default async function AdminSupportDetailPage({
   }
 
   // Fetch ticket submitter profile
-  const userObj = ticket.user_id ? (await supabase
-    .from("profiles")
-    .select("id, display_name")
-    .eq("id", ticket.user_id)
-    .maybeSingle()).data : null;
+  const { profile: userObj, accountStatus } = await loadSupportUser(supabase, ticket.user_id);
 
   // Fetch all messages (staff can see internal notes!)
   const { data: messages } = await supabase
@@ -122,7 +119,7 @@ export default async function AdminSupportDetailPage({
                 User: <span className="font-semibold text-gray-900">{userObj?.display_name || "Deleted User"}</span>
               </div>
               <div>
-                Account Status: <span className="font-semibold text-gray-900 uppercase">Not available from profile</span>
+                Account Status: <span className="font-semibold text-gray-900 uppercase">{accountStatus || "Unavailable"}</span>
               </div>
               <div>
                 User ID: <span className="font-mono text-gray-500">{ticket.user_id ? `${ticket.user_id.slice(0, 8)}...` : "Deleted user"}</span>
