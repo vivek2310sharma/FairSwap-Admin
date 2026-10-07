@@ -169,7 +169,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
 
       {error && (
         <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          Failed to load users: {"The Test backend could not complete this read."}
+          Failed to load users: {"The backend could not complete this read."}
         </div>
       )}
 

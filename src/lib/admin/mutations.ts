@@ -1,4 +1,5 @@
 import "server-only";
+import { releaseAllows } from "./release-policy";
 import { z } from "zod";
 import { staffAccess, type StaffRole } from "@/lib/auth/guard";
 import { sameOriginMutation } from "@/lib/auth/inputs";
@@ -38,6 +39,7 @@ export async function adminMutation(input: unknown, origin: string | null, host:
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { error: "Check the submitted identifiers and field values." };
   const value = parsed.data;
+  if (!releaseAllows(value)) return { error: "This operation is unavailable in the current release." };
   if (value.operation === "moderate" && value.action !== "approve" && !value.reason?.trim()) return { error: "A reason is required." };
   if (value.operation === "category" && (value.action === "create" ? !value.slug || !value.name : !value.categoryId)) return { error: "Category identity, name and slug are required for this action." };
   if (value.operation === "location" && ((value.action === "create_city" && (!value.name || !value.state || !value.slug)) || (value.action === "create_locality" && (!value.cityId || !value.name || !value.slug)) || (value.action === "update_city" && !value.cityId) || (value.action === "update_locality" && !value.localityId))) return { error: "Check the city/locality identity and required fields." };

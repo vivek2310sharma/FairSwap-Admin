@@ -183,7 +183,7 @@ describe("role-specific authentication and protected reads", () => {
   it("sanitizes read failures instead of returning an empty list", async () => {
     const client = await pageClient(["administrator"]);
     f.rows.categories.error = { message: "SECRET_SENTINEL" };
-    await expect(client.from("categories").select("*").order("name")).rejects.toThrow("Test data unavailable");
+    await expect(client.from("categories").select("*").order("name")).rejects.toThrow("Data unavailable");
     f.rows.categories.error = null;
     expect((await client.from("categories").select("*")).data).toEqual([]);
   });
@@ -225,5 +225,31 @@ describe("support account-status compatibility", () => {
   it("does not query a deleted or malformed user reference", async () => {
     for(const id of [null,"malformed"]) expect(await loadSupportUser(f.typed as unknown as SupabaseClient<Database>,id)).toEqual({ profile:null,accountStatus:null });
     expect(f.client.from).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("first Production release restrictions", () => {
+  it.each(cases)("enforces the release capability at the direct action boundary: %j", async (input,rpc) => {
+    vi.stubEnv("FAIRSWAP_DEPLOYMENT_ENV","production");vi.stubEnv("FAIRSWAP_SUPABASE_URL","https://kriuhwppxgxsyyrbjsau.supabase.co");vi.stubEnv("FAIRSWAP_ADMIN_RELEASE_STATE","active");
+    f.claims.iss="https://kriuhwppxgxsyyrbjsau.supabase.co/auth/v1";
+    const blocked=["assign-role","revoke-role","user-status","privacy-status"].includes(input.operation) || (input.operation === "moderate" && "action" in input && input.action === "remove");
+    const create=vi.fn(factory);const result=await adminMutation(input,origin,host,create);
+    expect(result.success === true).toBe(!blocked);
+    if(blocked) { expect(create).not.toHaveBeenCalled();expect(f.client.rpc).not.toHaveBeenCalled();expect(result.error).toContain("unavailable in the current release"); }
+    else expect(f.client.rpc).toHaveBeenCalledWith(rpc,expect.any(Object));
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("does not automatically retry an uncertain response; fresh saved state prevents a duplicate", async () => {
+    const original=f.client.rpc.getMockImplementation()!;
+    f.client.rpc.mockImplementation(async (name,args) => {
+      const result=await original(name,args);
+      if(name === "moderate_listing_reviewed") throw new Error("synthetic response lost after saving");
+      return result;
+    });
+    expect((await adminMutation(moderate,origin,host,factory)).success).not.toBe(true);
+    expect(f.rows.listings.data).toMatchObject({status:"active"});
+    expect((await adminMutation(moderate,origin,host,factory)).error).toContain("changed");
+    expect(f.client.rpc.mock.calls.filter(([name])=>name === "moderate_listing_reviewed")).toHaveLength(1);
   });
 });

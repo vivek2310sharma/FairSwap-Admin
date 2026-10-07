@@ -23,7 +23,7 @@ export function SignInForm() {
   </form>;
 }
 
-export function MfaForms({ factors }: { factors: { id: string; status: string }[] }) {
+export function MfaForms({ factors, issuer = "FairSwap Admin" }: { factors: { id: string; status: string }[]; issuer?: string }) {
   const [enrollment, enroll, enrolling] = useActionState(enrollAction, {});
   const [verification, verify, verifying] = useActionState(verifyAction, {});
   const [invalid, setInvalid] = useState(false);
@@ -35,7 +35,7 @@ export function MfaForms({ factors }: { factors: { id: string; status: string }[
     </form>}
     {enrollment.error && <p role="alert">{enrollment.error}</p>}
     {enrollment.enrollment && <div role="status">
-      <p>In your authenticator, add a time-based account named FairSwap Admin Test using this setup key:</p>
+      <p>In your authenticator, add a time-based account named {issuer} using this setup key:</p>
       <code>{enrollment.enrollment.secret}</code>
       <p>Keep this key private. Setup is incomplete until a code is verified. It is not recoverable from this page after leaving.</p>
     </div>}

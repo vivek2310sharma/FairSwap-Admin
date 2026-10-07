@@ -11,9 +11,9 @@ function checkedQuery<T extends object>(query: T): T {
   return new Proxy(query, { get(target, key) {
     if (key === "then") return (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
       Promise.resolve(target).then((result) => {
-        if (result && typeof result === "object" && "error" in result && result.error) throw new Error("Test data unavailable. Refresh or contact the backend owner.");
+        if (result && typeof result === "object" && "error" in result && result.error) throw new Error("Data unavailable. Refresh or contact the backend owner.");
         return result;
-      }).catch(() => { throw new Error("Test data unavailable. Refresh or contact the backend owner."); }).then(resolve, reject);
+      }).catch(() => { throw new Error("Data unavailable. Refresh or contact the backend owner."); }).then(resolve, reject);
     const member = Reflect.get(target, key);
     if (typeof member !== "function") return member;
     return (...args: unknown[]) => {
@@ -26,7 +26,7 @@ function checkedQuery<T extends object>(query: T): T {
 /** Every migrated page supplies a reviewed role allowlist, independently of navigation. */
 export async function pageClient(roles: readonly StaffRole[]): Promise<SupabaseClient<Database>> {
   const client = await requestClient();
-  if (!client) throw new Error("Test configuration unavailable.");
+  if (!client) throw new Error("Configuration unavailable.");
   const access = await staffAccess(client, true, roles);
   if (!access.allowed) {
     if (access.reason === "sign-in") redirect("/auth/sign-in");

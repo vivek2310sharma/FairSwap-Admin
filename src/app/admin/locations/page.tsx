@@ -82,7 +82,7 @@ export default async function AdminLocationsPage({ searchParams }: { searchParam
               </div>
 
               {/* City status toggle */}
-              <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this Test configuration change?">
+              <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this configuration change?">
                 <input type="hidden" name="action" value="update_city" />
                 <input type="hidden" name="city_id" value={city.id} />
                 <input type="hidden" name="is_active" value={(!city.is_active).toString()} />
@@ -111,7 +111,7 @@ export default async function AdminLocationsPage({ searchParams }: { searchParam
                     }`}
                   >
                     <span>📍 {loc.name}</span>
-                    <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this Test configuration change?" className="inline">
+                    <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this configuration change?" className="inline">
                       <input type="hidden" name="action" value="update_locality" />
                       <input type="hidden" name="locality_id" value={loc.id} />
                       <input type="hidden" name="is_active" value={(!loc.is_active).toString()} />
@@ -133,7 +133,7 @@ export default async function AdminLocationsPage({ searchParams }: { searchParam
               <summary className="cursor-pointer font-semibold text-emerald-600 hover:text-emerald-700">
                 + Add Locality to {city.name}
               </summary>
-              <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this Test configuration change?" className="mt-3 flex flex-wrap items-center gap-2">
+              <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this configuration change?" className="mt-3 flex flex-wrap items-center gap-2">
                 <input type="hidden" name="action" value="create_locality" />
                 <input type="hidden" name="city_id" value={city.id} />
                 <input type="hidden" name="is_active" value="true" />
@@ -166,7 +166,7 @@ export default async function AdminLocationsPage({ searchParams }: { searchParam
       {/* Add New City Form */}
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-4">
         <h2 className="text-base font-bold text-gray-900">Add New City</h2>
-        <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this Test configuration change?" className="space-y-4">
+        <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this configuration change?" className="space-y-4">
           <input type="hidden" name="action" value="create_city" />
           <input type="hidden" name="is_active" value="true" />
 

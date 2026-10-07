@@ -36,7 +36,6 @@ describe("foundation target validation (synthetic inputs only)", () => {
     { deploymentEnvironment: "test", supabaseUrl: TEST_SUPABASE_URL.replace("https:", "http:") },
     { deploymentEnvironment: "test", supabaseUrl: 42 },
     { deploymentEnvironment: "test", unexpected: true },
-    { deploymentEnvironment: "production" },
     null,
     "test",
   ])("rejects malformed/wrong-target inputs without echoing values: %j", (input) => {

@@ -397,3 +397,8 @@ describe("actual refresh transport and real pinned SDK", () => {
     expect(requestSDK.create).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+it("never enables loopback diagnostics for synthetic Production configuration", () => {
+  const env: NodeJS.ProcessEnv={NODE_ENV:"production",FAIRSWAP_DEPLOYMENT_ENV:"production",FAIRSWAP_SUPABASE_URL:"https://kriuhwppxgxsyyrbjsau.supabase.co",FAIRSWAP_SUPABASE_PUBLISHABLE_KEY:"sb_publishable_synthetic_fixture_not_a_real_key",FAIRSWAP_ADMIN_RELEASE_STATE:"active",FAIRSWAP_AUTH_DIAGNOSTICS:"loopback"};
+  expect(createDiagnostics("127.0.0.1:3000","guard",false,{env,argv:["node","/app/node_modules/next/dist/bin/next","start","--hostname","127.0.0.1"]}).enabled).toBe(false);
+});

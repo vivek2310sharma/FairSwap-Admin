@@ -30,7 +30,8 @@ export async function authMutation(
   factory: () => Promise<AdminClient | null> = () => requestClient(true),
 ): Promise<AuthState> {
   if (!sameOriginMutation(origin, host)) return { error: "Request origin rejected." };
-  if (!readAuthConfig()) return { error: "Test authentication configuration is unavailable." };
+  const config = readAuthConfig();
+  if (!config) return { error: "Authentication configuration is unavailable." };
   const signIn = operation === "sign-in" ? signInSchema.safeParse({ email: form.get("email"), password: form.get("password") }) : null;
   const verification = operation === "verify" ? verificationSchema.safeParse({ factorId: form.get("factorId"), code: form.get("code") }) : null;
   if ((signIn && !signIn.success) || (verification && !verification.success)) {
@@ -62,7 +63,7 @@ export async function authMutation(
       // Existing factors require challenge or separately supervised recovery.
       // No factor replacement/deletion or page-render enrollment.
       if (factors.length) return { error: "A factor already exists. Verify it or request supervised recovery." };
-      const enrollment = await client.auth.mfa.enroll({ factorType: "totp", issuer: "FairSwap Admin Test" });
+      const enrollment = await client.auth.mfa.enroll({ factorType: "totp", issuer: config.mfaIssuer });
       if (enrollment.error || !enrollment.data || enrollment.data.type !== "totp") return failure;
       const id = z.string().uuid().safeParse(enrollment.data.id);
       const secret = z.string().regex(/^[A-Z2-7]{16,256}$/).safeParse(enrollment.data.totp.secret);

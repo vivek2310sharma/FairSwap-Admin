@@ -60,6 +60,6 @@ describe("bounded location catalogue read", () => {
   it("distinguishes an empty catalogue from a failed backend read without exposing its error", async () => {
     expect((await loadLocations(fixture().client, {})).hasMore).toBe(false);
     await expect(loadLocations(fixture(null, { message: "SYNTHETIC_PRIVATE_ERROR" }).client, {}))
-      .rejects.toThrow("Test location data unavailable.");
+      .rejects.toThrow("Location data unavailable.");
   });
 });

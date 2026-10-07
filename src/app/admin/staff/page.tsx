@@ -58,7 +58,7 @@ export default async function AdminStaffPage() {
                         <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
                           {staff.role}
                         </span>
-                        <AdminMutationForm mutation={revokeStaffRoleAction} confirm="Revoke this Test staff role?"><input type="hidden" name="targetUserId" value={staff.user_id} /><button type="submit">Revoke role</button></AdminMutationForm>
+                        <AdminMutationForm mutation={revokeStaffRoleAction} confirm="Revoke this staff role?"><input type="hidden" name="targetUserId" value={staff.user_id} /><button type="submit">Revoke role</button></AdminMutationForm>
                       </td>
                       <td className="py-3 text-xs text-gray-500">
                         {new Date(staff.assigned_at).toLocaleString()}

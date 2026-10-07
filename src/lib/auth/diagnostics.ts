@@ -85,7 +85,7 @@ export function createDiagnostics(host: string, group: "guard" | "proxy", forwar
     const env = runtime.env ?? process.env;
     const argv = runtime.argv ?? process.argv;
     const hosted = ["VERCEL", "VERCEL_ENV", "CI", "AWS_LAMBDA_FUNCTION_NAME", "K_SERVICE", "WEBSITE_INSTANCE_ID", "NETLIFY", "CF_PAGES", "FLY_APP_NAME", "RENDER", "RAILWAY_ENVIRONMENT", "DENO_DEPLOYMENT_ID"].some((key) => !!env[key]);
-    if (env.FAIRSWAP_AUTH_DIAGNOSTICS !== "loopback" || hosted || forwarded || !readAuthConfig(env) ||
+    if (env.FAIRSWAP_AUTH_DIAGNOSTICS !== "loopback" || hosted || forwarded || readAuthConfig(env)?.environment !== "test" ||
       !/^(127\.0\.0\.1|localhost)(:\d{1,5})?$/.test(host) || !hasLoopbackBinding(argv)) return silent;
     const correlationId = randomUUID();
     const sink = runtime.sink ?? localSink;
