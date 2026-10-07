@@ -1,6 +1,12 @@
 # Progress
 
-Updated: 2026-10-05 (Europe/Copenhagen).
+Updated: 2026-10-07 (Europe/Copenhagen).
+
+## Current Test workflow follow-up
+
+The existing-feature Admin migration remains in place. Latest executable checkpoint 7353c1f5f11f598e6596ec3571dfa1e3e8bd2f2d is Ready on the protected Test Preview https://fairswap-admin-61sjsaokx-fairswap.vercel.app/admin. Two separately approved backend changes are applied to FairSwapTest and checkpointed in FairSwap-Web at da4a2055d9ee41778ef094380eeb4e2bddab3e06. Full Admin verification passed: 412 tests / 11 files, typecheck, zero-warning lint, standard build and whitespace checks. No custody/native suite was run.
+
+Earlier owner observations confirmed local staff sign-in/MFA/protected access/logout, all visible migrated local areas and a listing review. The owner reported sign-in complete on the preceding hosted Preview. Final hosted page/logout and actual local/hosted medium-photo observations remain pending. Metadata/grant and anonymous/missing-identity database denials passed; positive decisions and two-session database concurrency remain NOT RUN without exact disposable targets/actors/recipients. Backend pgTAP is not installed on Test; its existing account-creating suite was not run. No application data record, Production setting, other-platform source, push or merge changed. Account deletion/export fulfillment/schema editing remain unavailable. See [current evidence and gates](plans/admin-test-workflow-completion.md). Historical assignment records below retain their original scope and outcomes.
 
 ## ADMIN-00
 
