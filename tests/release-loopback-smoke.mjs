@@ -17,4 +17,3 @@ for(const [name,settings] of cases){
   console.log(JSON.stringify({scenario:name,result:'PASS',signIn:page.status,protectedAccess:access.status,staffCredentials:'none',transport:'loopback HTTP only'}));
  }finally{server.kill();await exited;}
 }
-
