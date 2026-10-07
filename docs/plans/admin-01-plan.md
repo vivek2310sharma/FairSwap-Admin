@@ -1,6 +1,6 @@
 # ADMIN-01 implementation plan
 
-Status: **ADMIN-01A foundation implemented and locally checked; pending review. ADMIN-01B and ADMIN-01C NOT STARTED.** The complete staff workflow is not implemented or tested. Primary implementation environment: Antigravity. Source baseline: Web **`8ad67672896a1a11f51009ffddf3bb39ee3cf698`**; follow [provenance](../PROVENANCE.md) for extraction. This plan does not authorize production or backend changes.
+Status: **ADMIN-01A ACCEPTED and merged; CI-01 merged with successful staging push checks. ADMIN-01B implemented with isolated tests, pending review; live acceptance NOT RUN / UNVERIFIED. ADMIN-01C NOT STARTED / NOT TESTED.** The complete staff workflow is not implemented or tested. Primary implementation environment: Antigravity. Source baseline: Web **`8ad67672896a1a11f51009ffddf3bb39ee3cf698`**; follow [provenance](../PROVENANCE.md) for extraction. This plan does not authorize production or backend changes.
 
 ## First functional milestone
 
@@ -112,3 +112,9 @@ Original-file authorization follow-up in Web/backend uses synthetic records and 
 Accept ADMIN-01 only after the small workflow succeeds with authorized moderator/admin at AAL2, reject reason handling and state/audit evidence are verified, denied roles/AAL/account states are enforced server-side, policy gating is preserved, derivatives satisfy the reviewed media design, environment/session boundaries pass tests, and Web/Android/iOS observations are recorded. Record test environment, source revision, outcomes, failures, and limitations without sensitive data.
 
 Closeout review precedes coding. Media-design review precedes media coding. Required backend changes require separate review and do not belong in this repository's migration history. Open verification items remain open until evidence supports closure. ADMIN-01 does not include production deployment or retirement of Web `/admin`.
+
+## Current bounded ADMIN-01B implementation and remaining gate
+
+The current explicit assignment authorises feature/admin-01b-auth, request-scoped server-only clients, dynamic sign-in/MFA/protected landing, policy-required versus verification-error states, reusable server authorization, isolated tests, documentation and draft PR publication. Historical delivery/authorization statements above retain their original context. Bootstrap reads only the verified user's own active account and administrator/moderator role at AAL1; protected boundaries require email confirmation, verified Test issuer/project and AAL2, and explicit boolean policy true. Runtime configuration is checked before clients/operations, without local/Production fallback.
+
+Live FairSwapTest acceptance needs separate authorisation after code/security review: existing approved staff accounts, self-read grants/RLS, credentials/expiry, supervised enrollment and existing-factor challenge, policy stale/error/recheck, cookie refresh/redirect persistence, local logout/revocation, and wrong-project/cross-host boundaries. No live acceptance was performed. The proposed onboarding/recovery runbook needs named operational owners and recovery approval. ADMIN-01C remains NOT STARTED / NOT TESTED; all seven backend/security items remain OPEN / UNVERIFIED. Neither ADMIN-01B nor the whole milestone is accepted.
