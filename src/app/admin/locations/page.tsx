@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { pageClient } from "@/lib/admin/server";
 import { manageLocationAction } from "./actions";
 import type { Locality } from "@/types/listing";
+import { loadLocations } from "@/lib/admin/locations";
 
-export default async function AdminLocationsPage() {
+export default async function AdminLocationsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const supabase = await pageClient(["administrator"]);
 
   const {
@@ -32,14 +33,8 @@ export default async function AdminLocationsPage() {
     redirect("/admin");
   }
 
-  const { data: cities } = await supabase
-    .from("cities")
-    .select(`
-      *,
-      localities(*)
-    `)
-    .order("name", { ascending: true });
-
+  const { cities, hasMore, page, q } = await loadLocations(supabase, await searchParams);
+  const pageLink = (number: number) => `/admin/locations?${new URLSearchParams({ q, page: String(number) })}`;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 space-y-8">
@@ -56,6 +51,16 @@ export default async function AdminLocationsPage() {
       {/* Configured Cities & Localities */}
       <div className="space-y-6">
         <h2 className="text-base font-bold text-gray-900">Configured Cities & Localities</h2>
+        <form className="flex gap-2">
+          <label>City name <input name="q" defaultValue={q} maxLength={100} className="border rounded px-2 py-1" /></label>
+          <button type="submit" className="border rounded px-3">Search</button>
+        </form>
+        <p className="text-xs text-gray-600">Page {page}. Up to 25 localities per city are shown; this is not the complete locality catalogue.</p>
+        <nav aria-label="City pages" className="flex gap-4">
+          {page > 1 && <Link href={pageLink(page - 1)}>Previous cities</Link>}
+          {hasMore && <Link href={pageLink(page + 1)}>Next cities</Link>}
+        </nav>
+        {cities.length === 0 && <p>No cities match this search.</p>}
         {cities?.map((city) => (
           <div key={city.id} className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 gap-3">
@@ -93,7 +98,7 @@ export default async function AdminLocationsPage() {
             {/* Localities list with toggles */}
             <div>
               <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                Localities ({city.localities?.length || 0})
+                Localities ({city.localities?.length || 0} shown)
               </h4>
               <div className="flex flex-wrap gap-2">
                 {city.localities?.map((loc: Locality) => (
