@@ -1,18 +1,20 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import Home from "@/app/page";
-import { TEST_SUPABASE_URL } from "@/lib/config";
+import { describe, expect, it } from "vitest";
+import { FoundationShell } from "@/components/foundation-shell";
+import { TEST_SUPABASE_URL, validateFoundationConfig } from "@/lib/config";
 
-describe("foundation page", () => {
+describe("historical foundation shell", () => {
   it.each([
     [undefined, undefined, "Deployment configuration is missing."],
     ["test", "https://synthetic-wrong-project.supabase.co", "Deployment configuration is invalid."],
     ["production", TEST_SUPABASE_URL, "Deployment configuration is invalid."],
     ["test", TEST_SUPABASE_URL, "Target configuration is validated."],
   ])("keeps staff workflows absent for env=%s", (environment, url, message) => {
-    vi.stubEnv("FAIRSWAP_DEPLOYMENT_ENV", environment);
-    vi.stubEnv("FAIRSWAP_SUPABASE_URL", url);
-    render(<Home />);
+    const config = validateFoundationConfig({
+      deploymentEnvironment: environment,
+      supabaseUrl: url,
+    });
+    render(<FoundationShell config={config} />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(environment === "test" && url === TEST_SUPABASE_URL ? "FairSwap Admin — TEST" : "FairSwap Admin — DISABLED");
     expect(screen.getByText("Foundation only. Staff workflows are not implemented.")).toBeVisible();
