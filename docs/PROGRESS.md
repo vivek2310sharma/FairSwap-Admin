@@ -1,5 +1,30 @@
 # Progress
 
+## Current state — 2026-10-08 (Europe/Copenhagen)
+
+Application release: https://admin.fairswap.in runs READY Production dpl_G3DSMaodZwrHKSQrvfXWJiJDAiEF from 2f1f2617b1274a3b1c280ecd742fa6b7171317a3. Connected Vercel alias/deployment metadata independently agrees. It was explicitly released from approved staging, not a main-triggered build. Before housekeeping, origin/staging equals this source; origin/main remains baseline 34e80ae894c744cbd2ec4cf99310dc61ac2884dc.
+
+Documentation: current README, release/provenance and staff guidance describe the released application and first-release exclusions. The isolated documentation branch starts from this exact source, with no application/configuration/dependency/CI/migration changes. At documentation preparation, publication/reconciliation are NOT RUN; the associated housekeeping PR closeouts/handback are the authoritative later execution record, including exact merge/check results and final heads.
+
+Git cleanup preparation: no remote deletion has occurred at this document checkpoint; verified final results are recorded in the housekeeping PR closeout/handback. Keep main/staging and every existing local branch/worktree/file. Delete only authorized remote tips contained in retained main history, with work merged/preserved and no active dependency. Record deletion only after verification.
+
+Current Admin Test integration address is https://fairswap-admin-git-staging-fairswap.vercel.app/admin, presently READY dpl_FRU1SCS1xyBS3PuCZzwavu7Dj552 / e74b7bf406cbbe771a02b58bd652460b4c1d1852. This Test artifact predates the homepage fix already in staging. The older test-rc alias is a retained acceptance checkpoint; admin-test.fairswap.in is not configured.
+
+Retained Test evidence includes owner sign-in/MFA/navigation/photo/logout observations and assisted fixture moderation/support/report/catalogue actions corroborated by saved state/audits. Sequential stale conflict is not simultaneous concurrency. Notification creation is not delivery/read. PR #6 records platform-authorized real HTTP without a FairSwap staff session: root reaches guarded Admin/sign-in, enabled Production sign-in form, protected access 403. No new authenticated Production workflow acceptance is claimed.
+
+Production removal/account-status/staff-role/privacy-status mutations remain server-disabled; deletion/export/schema editing unavailable. True simultaneous moderation, deliberate live duplicate submission, extra role actors, high-impact live workflows, pgTAP and recovery rehearsal remain NOT RUN. All seven historical risks remain OPEN / UNVERIFIED. No full Web test-suite pass is claimed; historical Web PGlite limitations stay with Web.
+
+Owner-provided release evidence records Web Admin retirement through PR #109 / b5369f2e19d11177ac45e69633a3310d23d4a9ed: old marketplace /admin URLs return standard themed HTTP 404s, not redirects. The three Web-owned Admin migrations are already applied to Test and Production per that release evidence; housekeeping runs no SQL or migration.
+
+Backups: Deferred by owner; not configured by this work.
+
+Local housekeeping verification: Node v24.15.0 / pnpm 10.12.1 frozen offline install PASS (unchanged lockfile; existing unrs-resolver script remains ignored), typecheck PASS, zero-warning lint PASS, 460 tests / 14 files PASS, Next.js 16.3.5 standard build PASS with backend configuration/diagnostics empty, relative documentation links and whitespace PASS. No live/backend/authenticated HTTP or owner browser exercise ran; no Web suite/native suite was run. Complete diff contains only eight documentation/guidance files.
+
+## Historical progress and assignment evidence
+
+The entries below retain original dates, failures, test counts, permission boundaries and NOT RUN limitations. "Current", "unstarted", "no hosting" and "main remains baseline" refer to their historical checkpoints, not the released state above. Later approvals do not turn earlier unexecuted tests into passes.
+
+
 ## Production-readiness candidate — 2026-10-08
 
 Implementation assignment from verified Admin f8f4e93944d61ca3bf1c54c4787a6d566deaf6b6 / backend 395151bfc98616fea70a1e1122ba37e2b8aa40b3, isolated readiness worktrees. Explicit Test/Production contract, exact issuer/transport binding, environment cookie namespaces, labels/links/MFA names and Production-only high-impact direct-action exclusions implemented. Framework/dependencies/CI protections retained. No Production change or backend migration performed. See docs/runbooks/production-release.md for actual evidence, exact future changes and single owner gate. Historical sections retain their original assignment attribution.

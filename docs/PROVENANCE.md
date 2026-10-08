@@ -1,5 +1,30 @@
 # Provenance
 
+## Running release and housekeeping — 2026-10-08
+
+Standalone Admin source: 2f1f2617b1274a3b1c280ecd742fa6b7171317a3. Connected Vercel deployment and canonical alias agree on READY Production dpl_G3DSMaodZwrHKSQrvfXWJiJDAiEF / admin.fairswap.in. Metadata identifies staging as the source branch. Later documentation/reconciliation commits update repository history, not the running deployment's source.
+
+Admin lineage: [PR #4](https://github.com/vivek2310sharma/FairSwap-Admin/pull/4) accepted migration, merge f8f4e93944d61ca3bf1c54c4787a6d566deaf6b6; [PR #3](https://github.com/vivek2310sharma/FairSwap-Admin/pull/3) authentication preserved in that history, merge 51464fd77509a3906a6dab4da70edda00fd1e816; [PR #5](https://github.com/vivek2310sharma/FairSwap-Admin/pull/5) environment/capability boundaries, merge e74b7bf406cbbe771a02b58bd652460b4c1d1852, reviewed head c9b1e4fc172d2924c2209394ee66cc4eaadee58e; [PR #6](https://github.com/vivek2310sharma/FairSwap-Admin/pull/6) homepage fix, tested head be13a3461c687843b93fd293862dcdd04e9d73de, merge/running source 2f1f2617b1274a3b1c280ecd742fa6b7171317a3. Initial Production release deliberately used approved staging; subsequent main reconciliation must not rewrite it as an automatic main release.
+
+Shared backend remains Web-owned. Retained release manifest identifies Web 395151bfc98616fea70a1e1122ba37e2b8aa40b3; migration publication was [Web PR #107](https://github.com/vivek2310sharma/FairSwap-Web/pull/107), Test backend checkpoint 152243a4b6134686c28c446c4f14850502340421. Owner release evidence records these exact existing migrations applied to both Test and Production:
+
+| Existing migration | Retained SQL SHA-256 |
+| --- | --- |
+| 20261007153735_admin_pending_medium_download.sql | d087734c7123e50e941b922976776fe2e332418673c0a8f225c40e0b7f35f409 |
+| 20261007153744_atomic_reviewed_moderation.sql | 883f53e8350ff8e84e1a406a56952431b9ad2603caa73fa87bf8b3e6fe2da071 |
+| 20261007161425_admin_pending_medium_download_info.sql | 9f4dfd5825588106795acffb2a0228e73898d895e28b16674e857cf853588ecd |
+
+Applied status is retained release evidence, not fresh database verification. No migration replay/history repair, SQL or other-application change occurs here. Older missing-migration observations describe their original checkpoints.
+
+Owner-provided retirement record: [FairSwap-Web PR #109](https://github.com/vivek2310sharma/FairSwap-Web/pull/109), release b5369f2e19d11177ac45e69633a3310d23d4a9ed. Old marketplace /admin URLs are standard themed HTTP 404s, not redirects. This task does not modify or recheck Web.
+
+Current documentation derives from exact Admin source, retained PR/repository acceptance, owner release evidence and read-only Vercel alias/deployment/Git/build settings. No new extraction/behavioral rewrite occurred. Original pinned Web revision and separately selected later migration snapshot below remain unchanged. Rollback references and verification limits are in the [release runbook](runbooks/production-release.md); no new rehearsal is claimed.
+
+## Historical source register and review evidence
+
+Records below preserve original chronology/scope. The empty extraction register describes the foundation snapshot before later migration entries.
+
+
 Authoritative source repository: [vivek2310sharma/FairSwap-Web](https://github.com/vivek2310sharma/FairSwap-Web).
 
 Pinned reviewed revision: **`8ad67672896a1a11f51009ffddf3bb39ee3cf698`**.
