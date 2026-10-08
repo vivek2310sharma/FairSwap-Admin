@@ -1,6 +1,6 @@
 # ADMIN-01 implementation plan
 
-Status: **PLANNED / NOT STARTED / NOT TESTED**. Primary implementation environment: Antigravity. Source baseline: Web **`8ad67672896a1a11f51009ffddf3bb39ee3cf698`**; follow [provenance](../PROVENANCE.md) for extraction. This plan does not authorize production or backend changes.
+Status: **ADMIN-01A ACCEPTED and merged; CI-01 merged with successful staging push checks. ADMIN-01B implemented with isolated tests, pending review; live acceptance NOT RUN / UNVERIFIED. ADMIN-01C NOT STARTED / NOT TESTED.** The complete staff workflow is not implemented or tested. Primary implementation environment: Antigravity. Source baseline: Web **`8ad67672896a1a11f51009ffddf3bb39ee3cf698`**; follow [provenance](../PROVENANCE.md) for extraction. This plan does not authorize production or backend changes.
 
 ## First functional milestone
 
@@ -13,6 +13,8 @@ Out of scope: user management, reports, support, privacy processing, categories,
 One separate staff-facing codebase: Next.js App Router, TypeScript, Tailwind CSS, Supabase. One separate Admin Vercel project is planned with distinct Test/Production deployments and proposed hosts `admin-test.fairswap.in` and `admin.fairswap.in`. Hosts, Vercel, and DNS are not configured in ADMIN-00.
 
 Test connects only to FairSwapTest (`wpppxlnbzqynvhpeuavd`). Production connects only to FairSwapProd; production configuration remains out of scope. Validate deployment configuration and fail closed when Test configuration is missing. No fallback to Production and no runtime database dropdown beneath an authenticated session.
+
+ADMIN-01B must enforce effective server-side deployment configuration validation where sessions/clients and protected operations are created or used. It must reject malformed or wrong-project configuration and fail closed before any backend operation. The ADMIN-01A static Test label and build-time validation do not verify this future boundary enforcement; no backend/client/authentication work is authorised in the tooling correction pass.
 
 Admin owns UI, sessions/auth orchestration, workflows, server routes/actions, and Admin tests. Web/Supabase owns migrations, shared schema, RLS, grants, RPC implementations, backend configuration, and backend tests. Any required backend change becomes a separately reviewed Web/backend task with Web/Android/iOS impact review.
 
@@ -110,3 +112,9 @@ Original-file authorization follow-up in Web/backend uses synthetic records and 
 Accept ADMIN-01 only after the small workflow succeeds with authorized moderator/admin at AAL2, reject reason handling and state/audit evidence are verified, denied roles/AAL/account states are enforced server-side, policy gating is preserved, derivatives satisfy the reviewed media design, environment/session boundaries pass tests, and Web/Android/iOS observations are recorded. Record test environment, source revision, outcomes, failures, and limitations without sensitive data.
 
 Closeout review precedes coding. Media-design review precedes media coding. Required backend changes require separate review and do not belong in this repository's migration history. Open verification items remain open until evidence supports closure. ADMIN-01 does not include production deployment or retirement of Web `/admin`.
+
+## Current bounded ADMIN-01B implementation and remaining gate
+
+The current explicit assignment authorises feature/admin-01b-auth, request-scoped server-only clients, dynamic sign-in/MFA/protected landing, policy-required versus verification-error states, reusable server authorization, isolated tests, documentation and draft PR publication. Historical delivery/authorization statements above retain their original context. Bootstrap reads only the verified user's own active account and administrator/moderator role at AAL1; protected boundaries require email confirmation, verified Test issuer/project and AAL2, and explicit boolean policy true. Runtime configuration is checked before clients/operations, without local/Production fallback.
+
+Live FairSwapTest acceptance needs separate authorisation after code/security review: existing approved staff accounts, self-read grants/RLS, credentials/expiry, supervised enrollment and existing-factor challenge, policy stale/error/recheck, cookie refresh/redirect persistence, local logout/revocation, and wrong-project/cross-host boundaries. No live acceptance was performed. The proposed onboarding/recovery runbook needs named operational owners and recovery approval. ADMIN-01C remains NOT STARTED / NOT TESTED; all seven backend/security items remain OPEN / UNVERIFIED. Neither ADMIN-01B nor the whole milestone is accepted.
