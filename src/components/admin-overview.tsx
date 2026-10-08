@@ -12,7 +12,7 @@ const areas = [
   { path: "locations", title: "Locations", description: "Create pilot cities and localities and manage their active status.", roles: ["administrator"] },
 ];
 export function AdminOverview({ role }: { role: StaffRole }) {
-  return <section className="admin-overview"><h2>Admin Operations</h2><p>Role: {role}. All operations use FairSwapTest and your own verified staff session.</p>
+  return <section className="admin-overview"><h2>Admin Operations</h2><p>Role: {role}. Operations use this deployment’s assigned backend and your own verified staff session. Some Production actions are excluded pending acceptance.</p>
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">{areas.filter((area) => area.roles.includes(role)).map((area) => <article key={area.path} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"><h3 className="text-lg font-bold">{area.title}</h3><p>{area.description}</p><Link href={`/admin/${area.path}`} prefetch={false}>Open {area.title} →</Link></article>)}</div>
   </section>;
 }

@@ -30,3 +30,14 @@ describe("fixed SDK transport and real token verifier", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+
+  it.each([TEST_SUPABASE_URL,"https://kriuhwppxgxsyyrbjsau.supabase.co"])("real SDK rejects a forged cross-project token for %s without fallback",async url => {
+    const transport=vi.fn(async()=>new Response(JSON.stringify({msg:"invalid JWT",code:"bad_jwt"}),{status:401,headers:{"Content-Type":"application/json"}}));
+    const client=createClient(url,"sb_publishable_synthetic_fixture_not_a_real_key",{global:{fetch:transport},auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    const encode=(v:unknown)=>btoa(JSON.stringify(v)).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+    const other=url === TEST_SUPABASE_URL ? "https://kriuhwppxgxsyyrbjsau.supabase.co" : TEST_SUPABASE_URL;
+    const token=encode({alg:"HS256",typ:"JWT"})+"."+encode({iss:other+"/auth/v1",sub:"11111111-1111-4111-8111-111111111111",aal:"aal2",exp:Math.floor(Date.now()/1000)+300})+".c3ludGhldGlj";
+    const result=await client.auth.getClaims(token);expect(result.error).toBeTruthy();expect(result.data).toBeNull();
+    expect(transport).toHaveBeenCalledWith(url+"/auth/v1/user",expect.any(Object));expect(fetch).not.toHaveBeenCalled();
+  });

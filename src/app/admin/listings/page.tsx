@@ -1,3 +1,4 @@
+import { readAuthConfig } from "@/lib/auth/runtime-config";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SessionControls } from "@/components/auth-forms";
@@ -14,7 +15,7 @@ export default async function PendingListingsPage() {
     redirect("/admin");
   }
   return <main className="queue-shell">
-    <header className="queue-header"><div><Link href="/admin">← Staff home</Link><p className="listing-status">FairSwap Admin · TEST</p><h1>Pending listings</h1>
+    <header className="queue-header"><div><Link href="/admin">← Staff home</Link><p className="listing-status">FairSwap Admin · {readAuthConfig()?.label ?? "DISABLED"}</p><h1>Pending listings</h1>
       <p>Oldest submissions first. Open a listing for full review and available moderation decisions.</p></div>
       <RefreshQueue /></header>
     <PendingListings queue={queue} />

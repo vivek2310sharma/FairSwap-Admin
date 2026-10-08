@@ -276,3 +276,70 @@ describe("actual entry points and cookie propagation", () => {
     expect(sdk.store.set).toHaveBeenCalledWith(ADMIN_COOKIE_NAME, "synthetic-refreshed", expect.objectContaining({ httpOnly: true, secure: true }));
   });
 });
+
+
+describe("release environment boundaries (synthetic only)", () => {
+  const prod = "https://kriuhwppxgxsyyrbjsau.supabase.co";
+  function production() {
+    vi.stubEnv("FAIRSWAP_DEPLOYMENT_ENV", "production"); vi.stubEnv("FAIRSWAP_SUPABASE_URL", prod);
+    vi.stubEnv("FAIRSWAP_ADMIN_RELEASE_STATE", "active");
+  }
+  it.each(["preview", "development", "unknown"])("rejects Production on hosted %s before SDK/network", async hosted => {
+    production(); vi.stubEnv("VERCEL", "1"); vi.stubEnv("VERCEL_ENV", hosted);
+    expect(readAuthConfig()).toBeNull();
+    expect(createAdminClient({getAll: () => [], setAll: vi.fn()}, true)).toBeNull();
+    expect((await staffAccess(f.typed,true)).allowed).toBe(false);
+    expect(f.client.auth.getClaims).not.toHaveBeenCalled(); expect(sdk.create).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
+  });
+  it("rejects Test on hosted Production and missing hosted identity", () => {
+    vi.stubEnv("VERCEL_ENV", "production"); expect(readAuthConfig()).toBeNull();
+    vi.stubEnv("VERCEL_ENV", undefined); vi.stubEnv("VERCEL", "1"); expect(readAuthConfig()).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it.each([undefined,"maintenance","unknown"])("keeps Production disabled for release state %s", state => {
+    production(); vi.stubEnv("FAIRSWAP_ADMIN_RELEASE_STATE", state);
+    expect(readAuthConfig()).toBeNull(); expect(createAdminClient({getAll: () => [], setAll: vi.fn()}, true)).toBeNull();
+    expect(sdk.create).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
+  });
+  it.each(["test","production"])("requires the exact verified issuer in %s", async environment => {
+    if(environment === "production") production();
+    const issuer = environment === "test" ? TEST_SUPABASE_URL : prod;
+    for(const wrong of [environment === "test" ? prod : TEST_SUPABASE_URL, issuer+".evil.invalid", issuer+"/", "http://"+issuer.slice(8)]) {
+      f.claims.iss = wrong+"/auth/v1";
+      expect((await staffAccess(f.typed,true)).allowed).toBe(false); expect(f.client.from).not.toHaveBeenCalled();
+    }
+    f.claims.iss=issuer+"/auth/v1"; expect((await staffAccess(f.typed,true)).allowed).toBe(true); expect(fetch).not.toHaveBeenCalled();
+  });
+  it.each(["test","production"])("isolates cookie reads/writes and safe links for %s", environment => {
+    if(environment === "production") production();
+    const config = readAuthConfig()!;
+    const own=config.cookieName; const other=environment === "test" ? "fairswap-admin-production-auth" : ADMIN_COOKIE_NAME;
+    const cookies=[{name:own,value:"synthetic"},{name:own+".0",value:"chunk"},{name:own+"-code-verifier",value:"synthetic"},{name:other,value:"do-not-read"},{name:"sb-marketplace-auth-token",value:"do-not-read"},{name:own+".x",value:"invalid"}];
+    const adapter={getAll:()=>cookies,setAll:vi.fn()}; createAdminClient(adapter,false);
+    const [url,,options]=sdk.create.mock.calls[0]; expect(url).toBe(config.url);
+    expect(options.cookies.getAll()).toEqual(cookies.slice(0,3));
+    options.cookies.setAll(cookies.map(c=>({...c,options:{domain:".fairswap.in",httpOnly:false,secure:false}})),{});
+    const writes=adapter.setAll.mock.calls[0][0]; expect(writes).toHaveLength(3);
+    for(const cookie of writes) { expect(cookie.options).not.toHaveProperty("domain");expect(cookie.options.httpOnly).toBe(true);expect(cookie.options.path).toBe("/");expect(cookie.options.sameSite).toBe("lax");if(environment === "production") expect(cookie.options.secure).toBe(true); }
+    expect(config.policyReviewUrl).toBe(config.marketplaceUrl+"/account/policy-review");
+    expect(new URL(config.policyReviewUrl).protocol).toBe("https:");expect(new URL(config.policyReviewUrl).search).toBe("");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("captures its assigned transport without a cross-environment fallback", async () => {
+    production();createAdminClient({getAll:()=>[],setAll:vi.fn()},true);
+    const options=sdk.create.mock.calls[0][2];
+    expect(()=>options.global.fetch(TEST_SUPABASE_URL+"/auth/v1/user")).toThrow("Backend destination rejected.");
+    vi.mocked(fetch).mockResolvedValue(new Response("{}"));
+    await options.global.fetch(prod+"/auth/v1/user");expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith(prod+"/auth/v1/user",{redirect:"error",cache:"no-store"});
+  });
+});
+
+it("uses the Production MFA issuer only after verified own-account AAL1 eligibility", async () => {
+  vi.stubEnv("FAIRSWAP_DEPLOYMENT_ENV","production");vi.stubEnv("FAIRSWAP_SUPABASE_URL","https://kriuhwppxgxsyyrbjsau.supabase.co");vi.stubEnv("FAIRSWAP_ADMIN_RELEASE_STATE","active");
+  f.claims.iss="https://kriuhwppxgxsyyrbjsau.supabase.co/auth/v1";f.claims.aal="aal1";
+  f.client.auth.mfa.listFactors.mockResolvedValue({data:{all:[]},error:null});
+  expect((await authMutation("enroll",form(),origin,host,factory)).enrollment).toBeDefined();
+  expect(f.client.auth.mfa.enroll).toHaveBeenCalledWith({factorType:"totp",issuer:"FairSwap Admin Production"});
+  expect(fetch).not.toHaveBeenCalled();
+});

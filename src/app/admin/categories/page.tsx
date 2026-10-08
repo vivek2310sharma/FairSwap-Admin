@@ -90,7 +90,7 @@ export default async function AdminCategoriesPage() {
 
               {/* Status toggle form */}
               <div className="flex items-center">
-                <AdminMutationForm mutation={manageCategoryAction} confirm="Confirm this Test configuration change?">
+                <AdminMutationForm mutation={manageCategoryAction} confirm="Confirm this configuration change?">
                   <input type="hidden" name="action" value="update" />
                   <input type="hidden" name="category_id" value={cat.id} />
                   <input type="hidden" name="is_active" value={(!cat.is_active).toString()} />
@@ -110,7 +110,7 @@ export default async function AdminCategoriesPage() {
       {/* Add Category Form */}
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-4">
         <h2 className="text-base font-bold text-gray-900">Add New Category</h2>
-        <AdminMutationForm mutation={manageCategoryAction} confirm="Confirm this Test configuration change?" className="space-y-4">
+        <AdminMutationForm mutation={manageCategoryAction} confirm="Confirm this configuration change?" className="space-y-4">
           <input type="hidden" name="action" value="create" />
           <input type="hidden" name="is_active" value="true" />
 

@@ -10,7 +10,7 @@ export default function StaffForm() {
   );
 
   return (
-    <form action={formAction} onSubmit={(event) => { if (isPending || !window.confirm("Confirm this Test staff role assignment?")) event.preventDefault(); }} className="mt-4 space-y-4">
+    <form action={formAction} onSubmit={(event) => { if (isPending || !window.confirm("Confirm this staff role assignment?")) event.preventDefault(); }} className="mt-4 space-y-4">
       {state?.error && (
         <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {state.error}

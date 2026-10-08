@@ -1,10 +1,10 @@
-import type { FoundationConfig } from "@/lib/config";
+import { ENVIRONMENTS, type FoundationConfig } from "@/lib/config";
 
 const configMessages: Record<FoundationConfig["status"], string> = {
-  unconfigured: "Test configuration is missing. Staff workflows remain disabled.",
-  invalid: "Test configuration is invalid. Staff workflows remain disabled.",
+  unconfigured: "Deployment configuration is missing. Staff workflows remain disabled.",
+  invalid: "Deployment configuration is invalid. Staff workflows remain disabled.",
   validated:
-    "Test target configuration is validated. No backend connection is established. Staff workflows remain disabled.",
+    "Target configuration is validated. No backend connection is established. Staff workflows remain disabled.",
 };
 
 export function FoundationShell({ config }: { config: FoundationConfig }) {
@@ -14,7 +14,7 @@ export function FoundationShell({ config }: { config: FoundationConfig }) {
         ADMIN-01A
       </p>
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-        FairSwap Admin — TEST
+        FairSwap Admin — {config.status === "validated" ? ENVIRONMENTS[config.deploymentEnvironment].label : "DISABLED"}
       </h1>
       <p className="mt-5 text-lg text-slate-700">
         Foundation only. Staff workflows are not implemented.

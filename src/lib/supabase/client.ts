@@ -1,7 +1,7 @@
 import "server-only";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { readAuthConfig } from "@/lib/auth/runtime-config";
-import { TEST_SUPABASE_URL } from "@/lib/config";
+import { TEST_SUPABASE_URL, PRODUCTION_SUPABASE_URL } from "@/lib/config";
 import { attachDiagnostics, type Diagnostics } from "@/lib/auth/diagnostics";
 
 export const ADMIN_COOKIE_NAME = "fairswap-admin-test-auth";
@@ -12,11 +12,13 @@ export type CookieAdapter = {
   setAll: (cookies: CookieWrite[], headers: Record<string, string>) => void;
 };
 
-export function isAdminCookie(name: string) {
-  return name === ADMIN_COOKIE_NAME ||
-    new RegExp(`^${ADMIN_COOKIE_NAME}\\.\\d+$`).test(name) ||
-    name === `${ADMIN_COOKIE_NAME}-code-verifier`;
+function cookieMatches(name: string, cookieName: string) {
+  return name === cookieName ||
+    new RegExp(`^${cookieName}\\.\\d+$`).test(name) ||
+    name === `${cookieName}-code-verifier`;
 }
+
+export function isAdminCookie(name: string) { return cookieMatches(name, ADMIN_COOKIE_NAME); }
 
 export function adminCookieOptions(options: CookieOptions, secure: boolean): CookieOptions {
   const safe = { ...options, path: "/", httpOnly: true, sameSite: "lax" as const, secure };
@@ -25,13 +27,17 @@ export function adminCookieOptions(options: CookieOptions, secure: boolean): Coo
 }
 
 /** Fixed destination even when a token contains an attacker-controlled issuer. */
-export const testOnlyFetch: typeof fetch = (input, init) => {
+export function environmentFetch(origin: string): typeof fetch {
+  if (![TEST_SUPABASE_URL, PRODUCTION_SUPABASE_URL].includes(origin)) throw new Error("Backend destination rejected.");
+  return (input, init) => {
   const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
-  if (url.origin !== TEST_SUPABASE_URL || url.username || url.password) {
+  if (url.origin !== origin || url.username || url.password) {
     throw new Error("Backend destination rejected.");
   }
   return fetch(input, { ...init, redirect: "error", cache: "no-store" });
-};
+  };
+}
+export const testOnlyFetch = environmentFetch(TEST_SUPABASE_URL);
 
 /** Observe the pinned SDK's POST refresh grant without reading any body. */
 export function observeRefresh(diagnostics?: Diagnostics) {
@@ -82,17 +88,20 @@ export function createAdminClient(adapter: CookieAdapter, secure: boolean, diagn
     diagnostics?.emit("configuration", "error", undefined, "configuration-unavailable");
     return null;
   }
-  const observer = observeRefresh(diagnostics);
+  const enabledDiagnostics = config.environment === "test" ? diagnostics : undefined;
+  const observer = observeRefresh(enabledDiagnostics);
+  const transport = config.environment === "test" && enabledDiagnostics?.enabled ? observer.transport : environmentFetch(config.url);
+  const cookieSecure = secure || config.environment === "production" || !!process.env.VERCEL_ENV;
   let client: ReturnType<typeof createServerClient>;
   try {
     client = createServerClient(config.url, config.key, {
-      cookieOptions: { name: ADMIN_COOKIE_NAME, ...adminCookieOptions({}, secure) },
-      global: { fetch: diagnostics?.enabled ? observer.transport : testOnlyFetch },
+      cookieOptions: { name: config.cookieName, ...adminCookieOptions({}, cookieSecure) },
+      global: { fetch: transport },
       cookies: {
-        getAll: () => adapter.getAll().filter(({ name }) => isAdminCookie(name)),
+        getAll: () => adapter.getAll().filter(({ name }) => cookieMatches(name, config.cookieName)),
         setAll: (updates, headers) => adapter.setAll(
-          updates.filter(({ name }) => isAdminCookie(name)).map((cookie) => ({
-            ...cookie, options: adminCookieOptions(cookie.options, secure),
+          updates.filter(({ name }) => cookieMatches(name, config.cookieName)).map((cookie) => ({
+            ...cookie, options: adminCookieOptions(cookie.options, cookieSecure),
           })), headers,
         ),
       },
@@ -101,8 +110,8 @@ export function createAdminClient(adapter: CookieAdapter, secure: boolean, diagn
     diagnostics?.emit("configuration", "exception", error);
     throw error;
   }
-  if (diagnostics) attachDiagnostics(client, diagnostics);
-  if (diagnostics?.enabled) {
+  if (enabledDiagnostics) attachDiagnostics(client, enabledDiagnostics);
+  if (enabledDiagnostics?.enabled) {
     try {
       // Synchronous observer only. Ignore session payload; never call auth here.
       client.auth.onAuthStateChange((event: string) => observer.sdkEvent(event));

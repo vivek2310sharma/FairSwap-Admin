@@ -1,6 +1,5 @@
 import "server-only";
 import { z } from "zod";
-import { TEST_SUPABASE_URL } from "@/lib/config";
 import { readAuthConfig } from "./runtime-config";
 import { requestClient } from "@/lib/supabase/server";
 import type { AdminClient } from "@/lib/supabase/client";
@@ -13,7 +12,7 @@ export type StaffAccess = { allowed: true; userId: string; role: StaffRole; aal:
   { allowed: false; reason: Denial };
 const claimsSchema = z.object({
   sub: z.string().uuid(),
-  iss: z.literal(`${TEST_SUPABASE_URL}/auth/v1`),
+  iss: z.string(),
   aud: z.literal("authenticated"),
   role: z.literal("authenticated"),
   aal: z.enum(["aal1", "aal2"]),
@@ -29,7 +28,8 @@ export async function staffAccess(client: AdminClient, protectedAccess: boolean,
     diagnostics.emit("final", "denied");
     return { allowed: false, reason };
   };
-  if (!readAuthConfig()) {
+  const config = readAuthConfig();
+  if (!config) {
     diagnostics.emit("configuration", "error", undefined, "configuration-unavailable");
     return deny("configuration");
   }
@@ -41,7 +41,7 @@ export async function staffAccess(client: AdminClient, protectedAccess: boolean,
     if (verified.error || !verified.data) return deny("sign-in");
     stage = "claims-validation";
     const parsed = claimsSchema.safeParse(verified.data.claims);
-    if (!parsed.success || parsed.data.exp <= Date.now() / 1000) {
+    if (!parsed.success || parsed.data.iss !== config.issuer || parsed.data.exp <= Date.now() / 1000) {
       diagnostics.emit(stage, "denied", undefined, "invalid-claims");
       return deny("denied");
     }

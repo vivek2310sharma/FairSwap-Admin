@@ -32,7 +32,7 @@ export default async function AdminAuditPage() {
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         {error && (
           <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {"The Test backend could not complete this read."}
+            {"The backend could not complete this read."}
           </div>
         )}
 

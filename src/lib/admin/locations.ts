@@ -13,6 +13,6 @@ export async function loadLocations(client: SupabaseClient<Database>, params: { 
     .limit(25, { referencedTable: "localities" });
   if (q) query = query.ilike("name", `%${q.replace(/[\\%_]/g, "\\$&")}%`);
   const result = await query.range((page - 1) * 25, page * 25);
-  if (result.error || !result.data) throw new Error("Test location data unavailable.");
+  if (result.error || !result.data) throw new Error("Location data unavailable.");
   return { cities: result.data.slice(0, 25), hasMore: result.data.length > 25, page, q };
 }

@@ -9,7 +9,7 @@ function date(value: string | null) {
 
 export function PendingListings({ queue }: { queue: Exclude<PendingQueue, { status: "denied" }> }) {
   if (queue.status === "error") return <section className="queue-message" role="alert">
-    <h2>Unable to load pending listings</h2><p>The Test backend could not supply the queue. Refresh to try again.</p>
+    <h2>Unable to load pending listings</h2><p>The backend could not supply the queue. Refresh to try again.</p>
   </section>;
   if (!queue.listings.length) return <section className="queue-message"><h2>Queue is clear</h2><p>No pending listings are visible to your staff session.</p></section>;
   return <>
