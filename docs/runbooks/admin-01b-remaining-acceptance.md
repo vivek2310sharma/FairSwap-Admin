@@ -1,3 +1,7 @@
+# Historical ADMIN-01B acceptance scope
+
+Current note — 2026-10-08: the checklist below records its original bounded authentication assignment and unrun cases. Later owner-assisted Test acceptance is recorded in [Test completion](../plans/admin-test-workflow-completion.md); see [current progress](../PROGRESS.md) for the released state. Preserve the gaps; this document does not request a repeated owner checklist, authorize live work or claim full Production acceptance.
+
 # ADMIN-01B remaining supervised acceptance
 
 Prepared 2026-10-05 from reviewed application `77a5c741b879ecd4315083069cfeb32c127cd09f` and preserved partial acceptance evidence. Instructions only; no helper, reservation, server or account activity is created. Antigravity remains primary. PR #3 stays draft. ADMIN-01B live acceptance INCOMPLETE; ADMIN-01C NOT STARTED / NOT TESTED.

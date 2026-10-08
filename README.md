@@ -1,63 +1,76 @@
 # FairSwap Admin
 
-FairSwap-Admin is the planned separate staff-facing application for FairSwap. ADMIN-00 is reviewed and saved in the documentation baseline. The accepted ADMIN-01A foundation has been published and merged into staging. **ADMIN-01A is accepted for its limited local application-foundation scope after source/artifact review**, including the Node and Vitest corrections. ADMIN-01B now implements bounded staff authentication with isolated verification, pending code/security review and live acceptance. **Live FairSwapTest acceptance is NOT RUN / UNVERIFIED; ADMIN-01C remains NOT STARTED / NOT TESTED**; the whole ADMIN-01 milestone is not complete.
+FairSwap-Admin is the standalone staff application for FairSwap, using Next.js App Router, TypeScript, Tailwind CSS and Supabase. The root opens the guarded Admin dashboard.
 
-Acceptance uses reviewed source/configuration artifacts, comparison of the six corrected files with the original submission, manifest/lockfile consistency checks, and the implementing agent's recorded local verification evidence. The reviewer did not independently rerun tests/build, verify authentication or RLS, or verify a deployment. All seven backend/security items remain **OPEN / UNVERIFIED**. Request-time configuration enforcement is implemented in ADMIN-01B and covered by isolated tests; live enforcement remains UNVERIFIED; Production, hosting, and live backend integration remain out of scope.
-
-Antigravity remains the primary development environment. Codex is explicitly authorised for the bounded ADMIN-01B implementation, isolated verification, branch publication, and draft-PR assignment; the stack, architecture, and workflow remain unchanged.
-
-The agreed stack is Next.js App Router, TypeScript, Tailwind CSS, and Supabase, with one Admin codebase and one separate Admin Vercel project planned for Test and Production deployments. Hosting and DNS are not configured by this task.
-
-| Deployment | Planned host | Assigned backend |
+| Environment | Current Admin address | Backend |
 | --- | --- | --- |
-| Test | admin-test.fairswap.in | FairSwapTest, project ref `wpppxlnbzqynvhpeuavd` |
-| Production | admin.fairswap.in | FairSwapProd; configuration out of scope |
+| Production | https://admin.fairswap.in | FairSwapProd: kriuhwppxgxsyyrbjsau |
+| Test integration | https://fairswap-admin-git-staging-fairswap.vercel.app/admin | FairSwapTest: wpppxlnbzqynvhpeuavd |
 
-Each deployment connects only to its assigned project. Missing Test configuration must fail closed, never fall back to Production. There is no runtime database selector. Test and Production use separate browser sessions; Web and Admin use host-specific cookies and no password/token handoff.
+Verified 2026-10-08: Production source 2f1f2617b1274a3b1c280ecd742fa6b7171317a3, READY deployment dpl_G3DSMaodZwrHKSQrvfXWJiJDAiEF. Test integration currently serves e74b7bf406cbbe771a02b58bd652460b4c1d1852 / dpl_FRU1SCS1xyBS3PuCZzwavu7Dj552; staging already includes the later homepage fix. Automatic Preview builds can advance Test. admin-test.fairswap.in is not configured; the older test-rc alias is a retained acceptance checkpoint.
 
-Admin owns its UI, auth/session orchestration, staff workflow presentation, Admin server routes/actions, tests, and later deployment configuration. [FairSwap-Web](https://github.com/vivek2310sharma/FairSwap-Web) remains authoritative for the shared backend: schema, RLS, grants, RPCs, Supabase configuration, `supabase/migrations/**`, and `supabase/tests/**`. Admin must not create a competing migration history. Web's existing `/admin` remains until separately approved migration and retirement.
+Vercel Authentication protects all deployments. Platform access and FairSwap staff authorization are separate requirements.
 
-Reviewed Web source revision: **`8ad67672896a1a11f51009ffddf3bb39ee3cf698`**. Any future extraction must preserve provenance; newer Web HEAD is not automatically approved.
+## Staff access and features
 
-Branch model: permanent `staging` and `main`; short-lived feature/fix/chore branches from `staging`, PRs back to `staging`, verification against FairSwapTest, then reviewed release PRs from `staging` to `main`. Remote `main` remains at documentation baseline `34e80ae894c744cbd2ec4cf99310dc61ac2884dc`. [PR #1](https://github.com/vivek2310sharma/FairSwap-Admin/pull/1) merged the accepted foundation `1eaf682b6875d26f06c4056296d22535b2146e96` into remote `staging` with merge commit `4cafc94d5e5b25f1738ea139f7a324631b435471`. This is not a production release or deployment.
+Existing staff sign in with email/password and complete TOTP MFA. Protected access requires verified identity/email, active account, permitted staff role, AAL2 and explicit current policy acceptance. Roles are administrator, moderator, support_agent and content_editor. Every page/action enforces its own role allowlist; navigation is not authorization. There is no public signup, social login or account-provisioning interface.
 
-## Local foundation
+Implemented areas: dashboard/navigation, pending listing queue/detail and ready medium photos, manual approval/rejection with reviewed revision/status conflicts, account/staff views, case-scoped reports, support notes/replies/status, privacy queue, immutable audit reads, category catalogue and bounded cities/localities. Moderation/reports require administrator/moderator; support actions administrator/support_agent; category actions administrator/content_editor; location actions administrator. Existing backend RLS/RPC rules still apply.
 
-Use Node.js 24.x, at least 24.15.0 and below 25, and pnpm 10.12.1 (pinned in package.json). Node 24.15.0 is the verified development baseline; this range also satisfies the selected tools' higher requirements, including Vite 7.3.6 (`^20.19.0 || >=22.12.0`) and Vitest 4.1.11 (`^20.0.0 || ^22.0.0 || >=24.0.0`). Install with `pnpm install --frozen-lockfile`, then run `pnpm dev` on loopback. No real credentials or environment files are required to build/run. The placeholder-only [.env.example](.env.example) documents empty configuration placeholders; do not populate credentials for this foundation.
+Production restrictions are enforced on the server before backend client construction:
 
-`FAIRSWAP_DEPLOYMENT_ENV` is separate from `NODE_ENV`. Only `test` and the exact FairSwapTest HTTPS origin `https://wpppxlnbzqynvhpeuavd.supabase.co` pass target validation. Missing settings produce an unconfigured state; wrong targets/malformed settings produce an invalid state. Both are disabled, and even validated settings establish no backend connection and enable no staff workflows. The page reads these server settings during rendering; the current static page captures status at build time, so rebuild after changing them. There is no database selector. The foundation diagnostic at / remains unchanged; the new authentication routes use separate request-time server-only clients.
+- Listing removal is disabled.
+- Account suspension/reinstatement is disabled.
+- Staff-role assignment/revocation is disabled.
+- Privacy-status mutations are disabled.
+- Account deletion, privacy-export fulfillment and category-schema editing remain unavailable.
+- Automatic listing approval is not delivered by this cleanup.
 
-Checks: `pnpm typecheck`, `pnpm lint`, `pnpm test:unit`, and `pnpm build`. See [progress](docs/PROGRESS.md) for actual results and limitations. A Next.js production-mode build is a local build check, not production configuration or deployment.
+Test retains existing capabilities subject to authorization. Production exclusions govern this application, not independently deployed clients or shared backend semantics. See [staff onboarding/recovery](docs/runbooks/staff-onboarding-recovery.md).
 
-Test tooling is pinned to Vitest 4.1.11 through an explicitly approved maintenance exception to the original Web dependency baseline. It includes the maintainer's fixes for [GHSA-82fw-gwwq-j7x9](https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9) and [GHSA-5xrq-8626-4rwp](https://github.com/vitest-dev/vitest/security/advisories/GHSA-5xrq-8626-4rwp). Tests remain non-interactive `vitest run` with jsdom and fetch protections; no exposed test UI/API or Browser Mode is used. This maintenance does not establish a compromise or a backend defect.
+## Environments and workflow
 
-ADMIN-01B enforces deployment configuration validation before request-scoped client creation and protected operations. The static foundation label is not an authorization boundary. Live Auth, RLS, MFA, session revocation, and cross-application behavior remain unverified.
+main is the approved Production source branch; staging is the Test integration branch. Feature/fix/docs branch -> PR to staging -> CI and Test verification -> reviewed history-preserving PR to main. Reconciliation puts the already-deployed application into main without another release.
 
-## Automated foundation checks
+Automatic Test/Preview builds are distinct from deliberate Production releases. Vercel uses main as its Production branch, but the existing ignored-build command allows only Preview builds and skips Production. Keep that restriction for ordinary merges. Deliberate Production releases require separate explicit approval of the exact source/operation; see [production release](docs/runbooks/production-release.md).
 
-[CI workflow](.github/workflows/ci.yml) runs on pull requests targeting staging/main and pushes to those branches. The single `Admin quality checks` job uses Ubuntu 24.04, Node 24.15.0, and pnpm 10.12.1, then frozen installation, typecheck, zero-warning lint, all existing and new isolated tests, and build. Actions are pinned to verified release commits; checkout credentials are not persisted. No caching, backend configuration, secrets, or deployment steps are supplied.
+Branch names alone do not select a backend. Request-time validated FAIRSWAP_DEPLOYMENT_ENV and exact FAIRSWAP_SUPABASE_URL select the environment with its matching server-only publishable key; platform VERCEL_ENV must agree. Production requires FAIRSWAP_ADMIN_RELEASE_STATE=active; maintenance denies access. NODE_ENV controls build mode only. Missing/malformed/mixed settings fail closed with no fallback or runtime selector.
 
-CI-01 local verification and historical foundation checks are separately recorded in [progress](docs/PROGRESS.md). CI-01 merged through PR #2 as 454f0f77e3f7e25df15ca6736a30e590e9ca6f17; its push run 37319645279 passed all checks and the then-existing 21 tests. New ADMIN-01B hosted evidence belongs in its draft PR/report. All seven backend/security items remain OPEN / UNVERIFIED; ADMIN-01C remains NOT STARTED / NOT TESTED.
+Test/Production have distinct host-only HttpOnly cookies, MFA issuers and fixed marketplace/policy links. Policy completion happens in the corresponding marketplace with separate sign-in and manual return/fresh Admin check. Null/error policy checks deny access. No credential/token/account handoff occurs in URLs. Cookie isolation does not make same-project bearer tokens intrinsically hostname-bound. Hosted diagnostics stay disabled.
 
-## Staff authentication (ADMIN-01B, pending review)
+FairSwap-Web owns shared Supabase migrations, schema, RLS, grants and RPC contracts. Admin has no competing migration history. Web Admin was retired via PR #109 / b5369f2e19d11177ac45e69633a3310d23d4a9ed; old marketplace /admin URLs return standard themed HTTP 404s, not redirects here.
 
-Use /auth/sign-in for existing staff email/password sign-in. /auth/mfa allows eligible staff to bootstrap their own TOTP factor or challenge an existing factor at AAL1; no enrollment runs during rendering and no existing factor is deleted or replaced. /admin and its read-only /admin/access endpoint require verified identity, email confirmation, active account, administrator/moderator role, current AAL2, and explicit current policy acceptance. These routes are dynamic and their responses private/no-store. No listing, moderation, media, or staff-management functionality is added.
+## Local setup and verification
 
-Only Test plus the exact approved HTTPS backend origin and a non-elevated sb_publishable_ key are accepted. .env.example leaves FAIRSWAP_DEPLOYMENT_ENV, FAIRSWAP_SUPABASE_URL, and FAIRSWAP_SUPABASE_PUBLISHABLE_KEY empty. No real configuration is needed for builds/isolated tests. No legacy anonymous JWT key, secret key, service-role key, localhost backend, or Production fallback is supported. Do not populate credentials or run live sign-in/MFA under this assignment.
+Use Node >=24.15.0 <25 (verified baseline 24.15.0), pnpm 10.12.1, Next.js 16.3.5 and the committed pnpm-lock.yaml. Do not upgrade tooling for housekeeping.
 
-SDK clients stay on the server: client components submit POST Server Actions, never SDK tokens. Each request gets its own client. Admin Test uses host-only fairswap-admin-test-auth cookies (HttpOnly, SameSite=Lax, Secure except loopback development), separate from Web. Proxy refresh preserves cookies; server guards independently verify getClaims signature/issuer/expiry/AAL and getUser identity before user-scoped self-account/self-role reads. Signout explicitly uses scope: local. Host-specific cookies do not make same-project bearer tokens intrinsically hostname-bound; live session/revocation behavior requires separate acceptance.
+```sh
+pnpm install --frozen-lockfile
+pnpm dev
+pnpm typecheck
+pnpm lint
+pnpm test:unit
+pnpm build
+```
 
-Explicit stale policy acceptance shows the fixed Test Web policy-review link, with separate Web sign-in and manual return. Errors/null/malformed policy results deny access with retry/signout, never a policy redirect loop. Visiting Web does not prove acceptance; Recheck access repeats the protected server guard. No consent is written and no token, account identifier, or return URL is transferred.
+dev/start bind to loopback. The placeholder-only [.env.example](.env.example) lists settings. No real configuration is required for disabled-state builds/isolated tests; missing configuration enables no staff workflow. Separately authorized Test configuration uses the existing owner process; never commit real environment files or print credentials. pnpm build is a local production-mode check, not a Production deployment.
 
-See the [proposed supervised staff onboarding/recovery runbook](docs/runbooks/staff-onboarding-recovery.md). Operational ownership and live verification remain review gates. Automated tests/CI establish isolated behavior only, not live Auth, RLS, MFA or ADMIN-01B acceptance.
+[CI](.github/workflows/ci.yml) runs pinned Node/pnpm, frozen install, typecheck, zero-warning lint, unit tests and build for PRs to staging/main and pushes to those branches. It supplies no live backend credentials and has no deployment step.
 
-Project documents:
+## Evidence and operations
 
-- [Agent instructions](AGENTS.md) and [Admin rules](.agents/rules/admin.md)
-- [Progress and review gate](docs/PROGRESS.md)
-- [Source provenance](docs/PROVENANCE.md)
-- [ADMIN-01 plan](docs/plans/admin-01-plan.md)
-- [Open security/backend verification items](docs/risks/admin-extraction.md)
+[Progress](docs/PROGRESS.md) separates release, documentation and cleanup. [Provenance](docs/PROVENANCE.md) preserves the original Web pin 8ad67672896a1a11f51009ffddf3bb39ee3cf698 and the separately selected later migration snapshot.
+
+Accepted Test evidence includes owner browser observations and separately corroborated saved fixtures/audits; this is not full authenticated Production acceptance. True simultaneous moderation, deliberate live duplicate submission, listing removal, extra role actors, account/staff/privacy mutations and pgTAP remain NOT RUN. Notification creation is not delivery/read. All seven [historical risks](docs/risks/admin-extraction.md) remain OPEN / UNVERIFIED. Historical failures/counts and local diagnostic details remain in progress and acceptance records. The full Web suite is not labelled passing; its documented PGlite limitations belong to Web.
+
+Backups: Deferred by owner; not configured by this work.
+
+Guidance: [AGENTS.md](AGENTS.md), [Admin rules](.agents/rules/admin.md).
+Historical evidence: [ADMIN-01 plan](docs/plans/admin-01-plan.md), [migration](docs/plans/admin-feature-migration.md), [Test completion](docs/plans/admin-test-workflow-completion.md), [remaining auth acceptance](docs/runbooks/admin-01b-remaining-acceptance.md).
+
+## Historical local diagnostics reference
+
+The following ADMIN-01B diagnostic record retains the original schema, activation constraints and unverified live observations. Its assignment restrictions and unstarted milestone labels describe the earlier checkpoint; they grant no current authorization to activate diagnostics or repeat acceptance.
 
 ## Local authentication diagnostics (ADMIN-01B-DIAG)
 

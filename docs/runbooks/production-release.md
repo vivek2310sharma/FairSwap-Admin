@@ -1,4 +1,45 @@
-# Production release candidate — 2026-10-08
+# Production release and operations
+
+## Current release — verified 2026-10-08
+
+Production https://admin.fairswap.in maps to READY dpl_G3DSMaodZwrHKSQrvfXWJiJDAiEF / fairswap-admin-2xtgq182b-fairswap.vercel.app, source 2f1f2617b1274a3b1c280ecd742fa6b7171317a3. Initial Production release was explicitly built from approved staging; main reconciliation is later housekeeping, not another application release. PR #5 integrated environment boundaries; PR #6 fixed root routing and records exact-source CI and deployment.
+
+Current Test integration: https://fairswap-admin-git-staging-fairswap.vercel.app/admin, READY dpl_FRU1SCS1xyBS3PuCZzwavu7Dj552, e74b7bf406cbbe771a02b58bd652460b4c1d1852. The test-rc alias retains earlier accepted Test evidence. Neither it nor an unconfigured admin-test hostname should be described as current staging source.
+
+## Repository and build boundary
+
+Vercel project prj_FGcPmQBikEg6JUCspX3hQqmfMbCj / fairswap-admin, team team_Fk8MZq6cxDXPS4ViXloT6AZW, is now Git-linked to vivek2310sharma/FairSwap-Admin. Production branch: main. Read-only authenticated CLI verified pnpm build, pnpm install --frozen-lockfile, Node 24.x and the existing ignored-build command:
+
+```sh
+if [ "$VERCEL_ENV" == "preview" ]; then exit 1; else exit 0; fi
+```
+
+Preview builds proceed; Production builds are skipped. PR #6 records its narrow exact-commit Production exception was restored to this command. No exception is authorized for documentation/reconciliation. GitHub's existing quality workflow has no deployment/database step; repository hooks are empty. All Deployments Vercel Authentication remains enabled (ssoProtection.deploymentType=all). Protection/ruleset API detail reads return 403; do not interpret that as absent GitHub protections.
+
+For ordinary changes: feature/fix/docs branch -> staging PR -> pinned CI and scoped Test verification -> reviewed history-preserving main PR. Recheck complete source diff, head/base and ignored-build/protection settings before merging. Main may contain later documentation while application, dependencies, build/runtime config, CI and migration assets must match the approved deployed source for this housekeeping.
+
+A future deliberate Production release requires separate approval of exact source and controlled build/deployment operation. Record source, current mapping and retained same-environment recovery artifact; verify environment/protection, restore the Preview-only restriction after any separately approved temporary exception, and attribute HTTP/owner observations precisely. A normal main merge is not authorization to admit a Production build. Do not promote a Test artifact to Production.
+
+## Current environment and scope
+
+The contract table and detailed candidate evidence below remain the retained source specification. Branch names and NODE_ENV do not choose the backend. Exact environment/project pair, publishable key, platform VERCEL_ENV agreement and active Production release state are required; maintenance fails closed. Credentials remain server-only; distinct host-only Test/Production cookies, MFA issuers and policy links preserve session boundaries.
+
+Production server actions still block listing removal, account suspension/reinstatement, staff assignment/revocation and privacy-status changes before client construction. Deletion, export fulfillment and category-schema editing remain unavailable; no automatic approval is introduced. Four roles retain per-page/action restrictions, active-account/AAL2/current-policy checks and backend RLS. Old Web Admin was retired via Web PR #109 / b5369f2e19d11177ac45e69633a3310d23d4a9ed; marketplace /admin returns themed HTTP 404, not redirect.
+
+The three existing Web-owned migrations in the retained manifest are already applied to Test and Production per owner release evidence. Do not replay them or repair history. No database operation is part of housekeeping.
+
+## Recovery references and acceptance limits
+
+Retained Production artifacts: prior dpl_31aAcdXPhDCi1EG5GurwyFNpnE2z / fairswap-admin-jeh23aequ-fairswap.vercel.app and earlier dpl_hnZ8513vPmFmuLLqajiggcZtmDjJ / fairswap-admin-njf8j56vk-fairswap.vercel.app. Both are READY at e74b7bf406cbbe771a02b58bd652460b4c1d1852 in connected metadata; PR #6 records that previous active and maintenance artifacts were retained, but the active/maintenance release-state association of these individual IDs is not independently verified here. Do not remove artifacts, execute rollback or claim a new rollback rehearsal.
+
+PR #6 records real platform-authorized HTTP without a FairSwap staff session: root reaches Admin/sign-in; Production sign-in enabled; /admin/access denies with 403. Its earlier accepted Test observations retain their source attribution. This task makes no authenticated workflow claim. Concurrent moderation, live deliberate duplicate submission, high-impact actions, extra role actors, pgTAP, notification delivery/read and recovery rehearsal remain NOT RUN/UNVERIFIED as originally documented. All seven historical risks stay OPEN / UNVERIFIED. Web PGlite limitations are not an Admin defect to fix here.
+
+Backups: Deferred by owner; not configured by this work.
+
+## Historical readiness candidate — 2026-10-08
+
+The remaining candidate record preserves original evidence, failures and unrun checks. "Before launch", missing migrations, no Git link, proposed hostname/protection and no rollback target describe that earlier pre-launch checkpoint; they are superseded by the verified released state above. Historical gates do not authorize new backend/deployment work.
+
 
 Authorized as one implementation assignment. Admin base f8f4e93944d61ca3bf1c54c4787a6d566deaf6b6; backend base 395151bfc98616fea70a1e1122ba37e2b8aa40b3. Unrelated checkouts and AGENTS.md edits are preserved. This document does not authorize a Production change.
 
@@ -49,7 +90,7 @@ No healthy standalone Admin Production deployment exists as a rollback target. P
 
 Application recovery order: restrict/disable Admin -> preserve audit/decisions -> roll back only the app to the same-environment maintenance/known-good artifact -> investigate -> approved fresh verification -> reopen. The three additive backend changes can remain in place while Admin is disabled. Any SQL rollback is separately approved, dependency-reviewed and preserves audit/history/completed decisions; no broad SQL undo, restore over current data or copying Test records.
 
-Production backup/PITR status/retention and last successful snapshot are NOT VERIFIED through accessible metadata in this run. Database backups do not contain Storage object bytes. Recovery requires a separately documented object-byte backup/version/retention arrangement as well as DB recovery. Do not download Production data or perform a live restore for preflight. Isolated restore/rollback rehearsal is NOT RUN while the local database engine is unavailable. Owner must accept documented RPO/RTO/storage limits or fund a recovery arrangement before launch.
+Backups: Deferred by owner; not configured by this work.
 
 ## Release order — requires final release approval
 
@@ -71,7 +112,7 @@ Production backup/PITR status/retention and last successful snapshot are NOT VER
 
 Do not approve a launch while exact catalog prerequisite comparison, isolated database tests or representative candidate authenticated Preview checks remain unverified. Raw Test/Production catalog SQL reads were rejected by automatic approval review citing historical assignment restrictions; permission reconciliation for metadata-only inspection is required. No denied operation was rerouted through another transport.
 
-Provider references (behavior, not proof of live configuration): https://vercel.com/docs/deployment-protection ; https://vercel.com/docs/deployments/environments ; https://supabase.com/docs/guides/platform/backups .
+Historical provider documentation informed the candidate; it is not live configuration evidence.
 
 ## Exact backend release manifest
 

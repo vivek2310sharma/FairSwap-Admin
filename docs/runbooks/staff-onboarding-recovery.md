@@ -1,12 +1,12 @@
-# Proposed staff onboarding and recovery
+# Staff onboarding and recovery
 
-Status: **PROPOSED / REQUIRES OPERATIONS AND SECURITY REVIEW**. No live account or factor was created or changed for ADMIN-01B. This document does not close risk D or establish live acceptance.
+Current application guidance — 2026-10-08. Production is https://admin.fairswap.in; Test integration is https://fairswap-admin-git-staging-fairswap.vercel.app/admin. Vercel Authentication platform access is required separately from FairSwap staff sign-in. Named activation/recovery/incident owners remain operational decisions; this document does not close risk D or claim full live acceptance. Historical ADMIN-01B did not create/change accounts or factors.
 
 ## Ownership and activation
 
-The platform owner must name a staff-activation owner, a recovery approver and a backup operator before rollout. Confirm identity, assignment, least-privilege role and approval through reviewed operational channels. Account activation and role assignment belong to the existing Web/backend owner; Admin supplies no provisioning interface. Any proposed backend change needs separate review with Web, Android and iOS impact assessment.
+The platform owner must name a staff-activation owner, a recovery approver and a backup operator before rollout. Confirm identity, assignment, least-privilege role and approval through reviewed operational channels. Account activation and role assignment belong to the existing Web/backend owner; Production staff-role assignment/revocation remains disabled; this task supplies no provisioning. Existing Test staff controls are not permission to provision accounts during housekeeping. Any proposed backend change needs separate review with Web, Android and iOS impact assessment.
 
-For a separately authorised acceptance exercise, use approved existing Test accounts. Confirm email verification and first-factor readiness without asking for or recording the password. Confirm authoritative user_accounts.account_status is active and staff_roles.role is administrator or moderator. User-editable metadata grants no access. Sign-in messages do not distinguish nonexistent accounts from incorrect passwords.
+For a separately authorised acceptance exercise, use approved existing Test accounts. Confirm email verification and first-factor readiness without asking for or recording the password. Confirm authoritative user_accounts.account_status is active and staff_roles.role is one of administrator, moderator, support_agent or content_editor. Each workflow independently checks its narrower role allowlist. User-editable metadata grants no access. Sign-in messages do not distinguish nonexistent accounts from incorrect passwords.
 
 ## Initial MFA
 
@@ -16,14 +16,17 @@ Challenge existing verified factors. Complete an unverified factor only with the
 
 ## Policy completion
 
-Explicit policy false uses the fixed Test Web policy-review journey. The person may need to sign into Web separately using the same account, complete its existing consent journey, return manually and request a fresh Admin recheck. Visiting Web is not consent evidence. No tokens, passwords, identifiers or cross-host return URLs are transferred. Verification outages show retry/signout; never bypass an error or write consent from Admin. Live hosted Web behavior was not verified here.
+Explicit policy false uses the environment-specific fixed marketplace policy-review journey: Test marketplace for Test, fairswap.in for Production. The person may need to sign into Web separately using the same account, complete its existing consent journey, return manually and request a fresh Admin recheck. Visiting Web is not consent evidence. No tokens, passwords, identifiers or cross-host return URLs are transferred. Verification outages show retry/signout; never bypass an error or write consent from Admin. Historical Test owner observations remain attributed to their recorded deployments; no fresh hosted policy acceptance is verified by this housekeeping.
 
 ## Recovery and reactivation
 
-Approve a recovery procedure with strong identity verification, a named approver, a recorded reason and an authorised operator using the existing provider/backend process. Password or email access alone must not be assumed sufficient for privileged recovery. Review temporary suspension, session revocation, factor removal/re-enrollment and approval ordering before real operations. Admin implements none of these mutations. Never perform real recovery to make a test pass.
+Approve a recovery procedure with strong identity verification, a named approver, a recorded reason and an authorised operator using the existing provider/backend process. Password or email access alone must not be assumed sufficient for privileged recovery. Review temporary suspension, session revocation, factor removal/re-enrollment and approval ordering before real operations. Admin has no MFA-recovery interface. Production account-status and staff-role mutations remain disabled; any provider recovery is separately approved, never performed by this housekeeping. Never perform real recovery to make a test pass.
 
 After separately authorised recovery, reverify first-factor readiness, supervised MFA, current policy, active account and role. Reactivation needs explicit owner approval. Keep records free of secrets and private user data. Same-project JWTs are not intrinsically host-bound; host-only HttpOnly Admin cookies limit automatic sharing but do not prove token revocation or session isolation. Local-scope logout and effects on Web/other sessions need live acceptance.
 
-## Separate live acceptance gate
+## Historical acceptance gate and remaining coverage
 
 After code/security review and explicit authorisation, exercise approved existing Test accounts with synthetic fixtures: credentials and expiry, role/account/AAL denials, initial and existing-factor MFA, failed challenges, stale/error policy states, fresh recheck, refreshed cookies through redirects, local logout/revocation and wrong-project/cross-host behavior. Verify actual self-read grants/RLS and email confirmation. Operational owners and provider recovery procedures still need approval. This runbook authorises no live task, deployment, backend change or Production access.
+
+
+The accepted assisted Test batch is recorded in [Test completion](../plans/admin-test-workflow-completion.md). Owner browser reports and saved fixture/audit checks are distinct. They do not close all risk items or establish full authenticated Production acceptance. No account/factor/role/policy change, new owner browser checklist or live recovery is requested by this documentation task.

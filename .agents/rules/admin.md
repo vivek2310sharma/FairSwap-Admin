@@ -2,36 +2,38 @@
 
 ## Ownership and workflow
 
-Antigravity is the primary development environment. One Admin codebase uses Next.js App Router, TypeScript, Tailwind CSS, and Supabase. Admin owns UI, auth/session orchestration, staff presentation, Admin routes/actions, tests, and later deployment configuration.
+Antigravity is the primary development environment. One standalone Admin uses Next.js App Router, TypeScript, Tailwind CSS and Supabase. Admin owns UI, auth/session orchestration, routes/actions, tests and application deployment configuration.
 
-FairSwap-Web/Supabase owns `supabase/migrations/**`, `supabase/tests/**`, shared schema, RLS, grants, RPC implementations, and shared backend configuration. Do not introduce Admin migrations or duplicate moderation business rules. Raise backend changes as separately reviewed Web/backend tasks, with explicit Web, Android, and iOS impact review. Preserve Web `/admin` until separately approved retirement.
+FairSwap-Web owns shared schema, RLS, grants, RPC implementations, Supabase configuration, supabase/migrations/** and supabase/tests/**. Do not create Admin migrations or duplicate backend business rules. Backend changes need separate Web review and Web/Android/iOS impact assessment. Web Admin retirement is recorded through PR #109 / b5369f2e19d11177ac45e69633a3310d23d4a9ed; old marketplace /admin URLs are themed HTTP 404s, not redirects.
 
-Use plan/build/verify separation. Approval of a plan does not establish successful implementation or testing. Carry unresolved findings forward until supported by evidence. Workflow: feature/fix/chore branches from `staging`, PR to `staging`, FairSwapTest verification, reviewed release PR to `main`. The reviewed bootstrap explicitly permits local staging and the ADMIN-01A feature branch from the documentation baseline; no remote branches or releases are authorised here.
+Separate plan/implementation/verification. Feature/fix/docs branches from staging -> staging PR -> CI/Test verification -> reviewed main PR. main is approved Production source; staging remains Test integration. Normal automatic Preview builds are distinct from explicitly approved Production releases. Preserve Vercel's existing Preview-only ignored-build restriction.
 
 ## Environment and session boundaries
 
-Test uses FairSwapTest (`wpppxlnbzqynvhpeuavd`); Production uses FairSwapProd with configuration outside current scope. Each deployment has a fixed assigned project. Missing Test configuration fails closed; never use Production as fallback or offer a runtime database selector. No production access during ordinary feature development.
+Test uses FairSwapTest wpppxlnbzqynvhpeuavd; Production uses FairSwapProd kriuhwppxgxsyyrbjsau. Each deployment validates its exact environment/project pair and platform environment. Branch name and NODE_ENV do not select a backend. Missing/mixed/malformed settings deny access; no fallback or runtime selector. Production requires explicit active release state; maintenance disables access.
 
-Use separate Test/Production browser sessions and host-specific Web/Admin cookies. No password or token handoff between applications; never place credentials/tokens in navigation URLs. A Supabase JWT is not intrinsically hostname-bound: verify issuer/project, reject wrong-project tokens, and test intended logout effects.
+Use distinct Test/Production host-only HttpOnly sessions, hosted Secure cookies, environment-specific MFA issuers and fixed marketplace/policy links. No password/token/account handoff in URLs. Same-project JWTs are not intrinsically hostname-bound: verify issuer/project and preserve logout/acceptance limitations. Ordinary feature development has no Production access.
 
 ## Authorization and inputs
 
-Enforce verified identity, active account, appropriate staff role, and AAL2 at every protected server/backend boundary. Navigation and layouts are insufficient. Listing moderation is limited to authorized moderator/admin roles. Use Zod for application/server boundary validation and safe redirect allow-lists.
+Enforce verified identity/email, active account, page/action role allowlist, AAL2 and explicit current policy acceptance at protected server/backend boundaries. Navigation/layouts alone are insufficient. Four staff roles retain their scoped access; listing moderation is administrator/moderator only. Use Zod boundary validation, same-origin POST checks and safe redirect allowlists.
 
-Use existing staff accounts with email/password and TOTP MFA. No public signup, social login, new email OTP, or shared Auth settings change. Sign-in/MFA bootstrap must work before AAL2. Preserve current FairSwap policy-acceptance gating; do not bypass or automatically accept policies. Document supervised activation, enrolment, and recovery.
+Existing staff use email/password and TOTP MFA. No public signup, social login, new email OTP or shared Auth-settings changes. Own-factor bootstrap is permitted at AAL1 before protected data access. Never bypass/automatically accept policy. Supervised activation/enrolment/recovery belongs to named operations/backend owners.
+
+Keep first-release Production server blocks for listing removal, account suspension/reinstatement, staff assignment/revocation and privacy-status changes. Deletion/export fulfillment/category-schema editing remain unavailable. No automatic approval is introduced by housekeeping. Application capability policy does not change independent clients/backend APIs.
 
 ## Media and secrets
 
-Media access is server-mediated, authorized before signing, limited to listing-matched thumb/medium/large derivatives, short-lived URLs, and sensitive responses with `Cache-Control: no-store`. Refuse originals. Do not copy the Web media route unchanged. Avoid unnecessary bucket-path disclosure and signed URLs in logs.
+Current media route is server-mediated, staff-authorized and pending-listing-matched ready medium derivative bytes using nonprivileged session access, private/no-store. No originals or elevated fallback. Avoid paths, signed URLs, tokens and private records in logs. Any future signing/credential design needs separate review; service-role/secret keys are elevated, not storage-scoped. Never expose secrets in browsers.
 
-Media-signing credential design requires review before coding that portion. Service-role/secret keys are elevated server credentials, not storage-scoped credentials. Never expose secrets or service-role credentials in the browser. No credential provisioning or Storage policies during ADMIN-00.
+Do not read real environment/credential files for documentation. Never copy secret values, login links, tokens or authenticated browser artifacts into evidence.
 
-## Provenance and safety
+## Provenance, preservation and current scope
 
-Pinned Web source: `8ad67672896a1a11f51009ffddf3bb39ee3cf698`. For every copied/adapted/rewritten source record repository, source path, SHA, destination path, and treatment in docs/PROVENANCE.md. Do not silently use newer HEAD; adoption needs a separately reviewed provenance update.
+Preserve original Web pin 8ad67672896a1a11f51009ffddf3bb39ee3cf698 and later explicitly selected full-migration snapshot in docs/PROVENANCE.md. Record repository/path/SHA/destination/treatment for all source-derived behavior; newer Web HEAD is not implicitly authorized.
 
-Preserve existing work. No destructive Git commands, resets, cleans, force checkouts, or overwrites. No deployments or production changes without explicit approval. Historical ADMIN-00 permitted only documentation and the empty-repository clone. The accepted review explicitly permits one local documentation baseline commit and local staging/feature branches, then ADMIN-01A foundation code, dependencies, local tests, and a placeholder-only .env.example. Keep foundation changes uncommitted. No ADMIN-01B/01C implementation, real environment files, backend operations, private-data access, credentials, pushes, PRs, issues, or emails. All seven reported security/backend items remain OPEN / UNVERIFIED.
+Current owner task is documentation/release-history reconciliation and conditional remote cleanup, as scoped in AGENTS.md. Historical bootstrap/authentication permissions describe their original tasks. Preserve all local work, branches and worktrees; no reset/clean/force checkout, published history rewrite, local deletion or garbage collection.
 
-## Current assignment: ADMIN-01B
+This task permits no application/CI/configuration/dependency changes, database/migration operations, account/role/MFA/policy operations, settings/protection/DNS/alias changes, Production build/release/rollback, artifact deletion, backups or other-application work. Verify deployment mapping and Preview-only build boundary before publication/merge. Every remote deletion requires exact-tip ancestry and dependency checks immediately beforehand.
 
-The current user task permits bounded ADMIN-01B implementation, isolated tests, necessary pinned auth dependencies, feature/admin-01b-auth publication and one draft PR to staging. It supersedes conflicting historical foundation/local-only wording only for that assignment. Antigravity remains primary. No merge, live Supabase/Auth/MFA operations, real account or factor changes, real environment/credential reads, backend changes, hosting, deployment, Production access, other-application changes or ADMIN-01C work. All seven backend/security items remain OPEN / UNVERIFIED; live ADMIN-01B acceptance remains NOT RUN / UNVERIFIED.
+All seven historical risks remain OPEN / UNVERIFIED. Report actual tests/observations separately; preserve failures and NOT RUN gaps. Backups: Deferred by owner; not configured by this work.
