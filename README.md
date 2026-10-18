@@ -38,7 +38,7 @@ Branch names alone do not select a backend. Request-time validated FAIRSWAP_DEPL
 
 Test/Production have distinct host-only HttpOnly cookies, MFA issuers and fixed marketplace/policy links. Policy completion happens in the corresponding marketplace with separate sign-in and manual return/fresh Admin check. Null/error policy checks deny access. No credential/token/account handoff occurs in URLs. Cookie isolation does not make same-project bearer tokens intrinsically hostname-bound. Hosted diagnostics stay disabled.
 
-FairSwap-Web owns shared Supabase migrations, schema, RLS, grants and RPC contracts. Admin has no competing migration history. Web Admin was retired via PR #109 / b5369f2e19d11177ac45e69633a3310d23d4a9ed; old marketplace /admin URLs return standard themed HTTP 404s, not redirects here.
+FairSwap-Backend is the canonical source repository for shared Supabase migrations, schema, RLS, grants and RPC contracts; exclusive hosted deployment authority has not yet transferred from existing manual/Web operators. FairSwap-Web remains the marketplace application owner. Admin has no competing migration history. Web Admin was retired via PR #109 / b5369f2e19d11177ac45e69633a3310d23d4a9ed; old marketplace /admin URLs return standard themed HTTP 404s, not redirects here.
 
 ## Local setup and verification
 
