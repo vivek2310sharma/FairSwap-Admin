@@ -147,38 +147,50 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
       {/* Main Grid: User Profile & Moderation Form */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
         {/* Left 2 Cols: User Details */}
-        <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Account Information</h2>
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
-            <div className="sm:col-span-1">
-              <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Mail className="h-3.5 w-3.5" /> Email Address
-              </dt>
-              <dd className="mt-1 text-sm font-semibold text-gray-900">{targetUser.email}</dd>
+        <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Account Information</h2>
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+              <div className="sm:col-span-1">
+                <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                  <Mail className="h-3.5 w-3.5" /> Email Address
+                </dt>
+                <dd className="mt-1 text-sm font-semibold text-gray-900">{targetUser.email}</dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                  <User className="h-3.5 w-3.5" /> Display Name
+                </dt>
+                <dd className="mt-1 text-sm font-semibold text-gray-900">
+                  {targetUser.display_name || "—"}
+                </dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" /> Member Since
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {new Date(targetUser.created_at).toLocaleString()}
+                </dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                  <Package className="h-3.5 w-3.5" /> Total Listings
+                </dt>
+                <dd className="mt-1 text-sm font-semibold text-gray-900">{targetUser.listings_count}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">Listing Status Breakdown</h3>
+            <div className="rounded-md bg-gray-50 p-3 text-xs text-gray-600 border border-gray-100">
+              <p className="flex items-start gap-1.5">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <span>Exact server-side counts by status (Active, Sold, Pending Review, Rejected) are currently unavailable due to backend limitations preventing bounded grouped aggregates.</span>
+              </p>
             </div>
-            <div className="sm:col-span-1">
-              <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <User className="h-3.5 w-3.5" /> Display Name
-              </dt>
-              <dd className="mt-1 text-sm font-semibold text-gray-900">
-                {targetUser.display_name || "—"}
-              </dd>
-            </div>
-            <div className="sm:col-span-1">
-              <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" /> Member Since
-              </dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                {new Date(targetUser.created_at).toLocaleString()}
-              </dd>
-            </div>
-            <div className="sm:col-span-1">
-              <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Package className="h-3.5 w-3.5" /> Total Listings
-              </dt>
-              <dd className="mt-1 text-sm text-gray-900">{targetUser.listings_count}</dd>
-            </div>
-          </dl>
+          </div>
         </div>
 
         {/* Right Col: Moderation Actions */}
@@ -248,6 +260,10 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
               No listings found for this user.
             </div>
           ) : (
+            <>
+            <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recent listings — up to 30</h3>
+            </div>
             <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
               <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                 <tr>
@@ -287,6 +303,7 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                 ))}
               </tbody>
             </table>
+            </>
           )}
         </div>
       )}
