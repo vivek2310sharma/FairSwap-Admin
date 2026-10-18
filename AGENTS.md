@@ -1,5 +1,15 @@
 # Agent instructions
 
+## Active assignment — Admin operational UX Phase 2 (2026-10-18)
+
+The FairSwap owner explicitly authorizes **Phase 2A User Management UX** and **Phase 2B Staff Management UX** as separate, reviewable Admin-only frontend tasks. This authorization follows merged Phase 1 PR #13 and supersedes its Phase-1-only scope restriction **solely for the Phase 2A/2B work specified in [the Phase 2 plan](docs/plans/admin-ux-phase-2-plan.md)**. The October 8 housekeeping rules and Phase 1 task limits remain historical; all security, release, backend ownership and environment boundaries still apply.
+
+**Permitted within the relevant, separately scoped Phase 2 PR:** accessible responsive layouts, search/filter/navigation UX, role-aware presentation, and **bounded, authorized, read-only** use of existing Supabase tables or `admin_search_users` RPC via the existing guarded page client; appropriate UI/unit tests and documentation. Phase 2A focuses on user search/details and truthful listing-status counts. Phase 2B focuses on administrator-only user selection and staff directory readability. Never invent statistics; distinguish capped recent rows from whole-history counts.
+
+**Not permitted:** changing auth/MFA, AAL2/policy verification, staff or account authorization, mutation semantics/actions, RPC implementations or signatures, RLS, grants, schema/migrations, Supabase settings, secrets, Production restrictions, CI, dependencies, deployments, or other repositories. Role assignment/revocation **must** continue using the current validated UUID and guarded actions. Do not weaken server checks or use `service_role`/elevated keys to satisfy a UI requirement. If existing reads cannot safely support a feature, document the required backend-owned contract for separate review and display an honest unavailable state.
+
+**Workflow:** Work on one subphase at a time in feature branches rooted in latest `staging`; target `staging`, not `main`; run the pinned typecheck/lint/unit/build checks; review Test role isolation, narrow screens and mobile performance; leave PRs unmerged and do not deploy Production. Antigravity owns architecture/review; Jules is the scoped implementation agent. Preserve existing security and historical notes below.
+
 ## Active assignment — Admin UI/UX modernization (2026-10-18)
 
 **Owner authorization for Google Jules — Phase 1, UI only.** Jules may implement a modern, responsive FairSwap Admin application shell, role-aware navigation, dashboard presentation, reusable frontend styling/components, accessibility improvements, and tests directly related to those changes.
