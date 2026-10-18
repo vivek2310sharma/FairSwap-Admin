@@ -175,7 +175,7 @@ export function MfaForms({ factors, issuer = "FairSwap Admin" }: { factors: { id
   );
 }
 
-export function SessionControls({ retry = false }: { retry?: boolean }) {
+export function SessionControls({ retry = false, tabIndex }: { retry?: boolean; tabIndex?: number }) {
   const [logout, signOut, pending] = useActionState(signOutAction, {});
   const [recheck, retryAction, retrying] = useActionState(recheckAction, {});
 
@@ -186,6 +186,7 @@ export function SessionControls({ retry = false }: { retry?: boolean }) {
           <button
             type="submit"
             disabled={retrying}
+            tabIndex={tabIndex}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${retrying ? "animate-spin" : ""}`} />
@@ -199,6 +200,7 @@ export function SessionControls({ retry = false }: { retry?: boolean }) {
         <button
           type="submit"
           disabled={pending}
+          tabIndex={tabIndex}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 hover:bg-red-600 hover:text-white font-medium text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
         >
           <LogOut className="w-3.5 h-3.5" />

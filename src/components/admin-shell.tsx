@@ -147,35 +147,72 @@ export function AdminShell({
 
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
   const isInitialMount = useRef(true);
+  const wasOpenedRef = useRef(false);
 
   // Close mobile drawer on route change without setState inside useEffect
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
-    setMobileOpen(false);
+    if (mobileOpen) {
+      setMobileOpen(false);
+    }
   }
 
-  // Handle focus management and escape key for mobile drawer
+  // Handle focus management and focus trap for mobile drawer
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    if (mobileOpen) {
-      closeButtonRef.current?.focus();
-    } else {
-      menuButtonRef.current?.focus();
-    }
-  }, [mobileOpen]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && mobileOpen) {
-        setMobileOpen(false);
+    if (mobileOpen) {
+      wasOpenedRef.current = true;
+      closeButtonRef.current?.focus();
+
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setMobileOpen(false);
+          return;
+        }
+
+        if (event.key === "Tab") {
+          if (!drawerRef.current) return;
+          const focusables = Array.from(
+            drawerRef.current.querySelectorAll<HTMLElement>(
+              'a[href]:not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])'
+            )
+          );
+
+          if (focusables.length === 0) return;
+
+          const firstEl = focusables[0];
+          const lastEl = focusables[focusables.length - 1];
+          const activeEl = document.activeElement;
+
+          if (event.shiftKey) {
+            if (activeEl === firstEl || !drawerRef.current.contains(activeEl)) {
+              event.preventDefault();
+              lastEl.focus();
+            }
+          } else {
+            if (activeEl === lastEl || !drawerRef.current.contains(activeEl)) {
+              event.preventDefault();
+              firstEl.focus();
+            }
+          }
+        }
+      };
+
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    } else {
+      if (wasOpenedRef.current) {
+        wasOpenedRef.current = false;
+        menuButtonRef.current?.focus();
       }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    }
   }, [mobileOpen]);
 
   // Filter groups and items by role
@@ -256,8 +293,11 @@ export function AdminShell({
 
       {/* Mobile Navigation Drawer */}
       <aside
+        ref={drawerRef}
         aria-label="Mobile navigation drawer"
-        {...(mobileOpen ? { role: "dialog", "aria-modal": true } : { "aria-hidden": true })}
+        {...(mobileOpen
+          ? { role: "dialog", "aria-modal": true }
+          : { "aria-hidden": true, inert: true })}
         className={`fixed inset-y-0 left-0 w-72 bg-slate-900 text-slate-100 z-50 transform transition-transform duration-200 ease-in-out md:hidden flex flex-col shadow-2xl ${
           mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
         }`}
@@ -338,7 +378,7 @@ export function AdminShell({
               </div>
             </div>
           </div>
-          <SessionControls />
+          <SessionControls tabIndex={mobileOpen ? 0 : -1} />
         </div>
       </aside>
 
