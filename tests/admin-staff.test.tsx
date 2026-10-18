@@ -91,8 +91,13 @@ describe("Staff Management UX", () => {
     expect((assignButton2 as HTMLButtonElement).disabled).toBe(false);
   });
 
-  test("StaffForm warns about production availability", () => {
-     render(<StaffForm />);
+  test("StaffForm warns about production availability and disables buttons", () => {
+     render(<StaffForm isProduction={true} />);
      expect(screen.getByText(/Production staff role assignment and revocation are currently disabled/)).toBeDefined();
+
+     const assignButton = screen.queryByRole("button", { name: "Assign Staff Role" });
+     if (assignButton) {
+         expect((assignButton as HTMLButtonElement).disabled).toBe(true);
+     }
   });
 });

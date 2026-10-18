@@ -13,7 +13,7 @@ function fixture(data: unknown[] | null = [], error: unknown = null) {
     limit: vi.fn(() => query),
     ilike: vi.fn(() => query),
     eq: vi.fn(() => query),
-    single: vi.fn(async () => ({ data: { id: "test", name: "test" }, error: null })),
+    single: vi.fn(async () => ({ data: { id: "test", name: "test", state: "test", slug: "test", is_active: true } as unknown, error: null as unknown })),
     range: vi.fn(async () => ({ data, error, count: 100 }))
   };
   const client = { from: vi.fn(() => query) };
@@ -78,9 +78,23 @@ describe("loadLocalities", () => {
         expect(f.query.range).toHaveBeenCalledWith(0, 50);
     });
 
+    it("advances past the first 50 correctly", async () => {
+        const f = fixture(Array.from({ length: 2 }, (_, id) => ({ id })));
+        const result = await loadLocalities(f.client, "city-id", { page: "2" });
+        expect(result.localities).toHaveLength(2);
+        expect(result.hasMore).toBe(false);
+        expect(f.query.range).toHaveBeenCalledWith(50, 100);
+    });
+
     it("filters localities based on search query", async () => {
         const f = fixture([]);
         await loadLocalities(f.client, "city-id", { q: "Locality" });
         expect(f.query.ilike).toHaveBeenCalledWith("name", "%Locality%");
+    });
+
+    it("throws City not found for an empty city response", async () => {
+        const f = fixture([]);
+        f.query.single.mockResolvedValueOnce({ data: null as unknown, error: { message: "Row not found", details: "", hint: "", code: "" } as unknown });
+        await expect(loadLocalities(f.client, "city-id", {})).rejects.toThrow("City not found.");
     });
 });

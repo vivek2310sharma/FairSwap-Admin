@@ -31,28 +31,28 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
     redirect("/admin");
   }
 
-  const { data: categories } = await supabase
-    .from("categories")
-    .select(`
-      *,
-      category_attributes(*)
-    `)
-    .order("sort_order", { ascending: true });
-
   const resolvedParams = await searchParams;
-  const q = typeof resolvedParams.q === "string" ? resolvedParams.q.trim().toLowerCase() : "";
-  const statusFilter = typeof resolvedParams.status === "string" ? resolvedParams.status : "all";
+  const q = typeof resolvedParams.q === "string" ? resolvedParams.q.trim().slice(0, 100) : "";
+  const statusFilter = ["active", "inactive", "all"].includes(typeof resolvedParams.status === "string" ? resolvedParams.status : "")
+      ? resolvedParams.status
+      : "all";
 
-  const filteredCategories = (categories || []).filter((cat) => {
-    let match = true;
-    if (q) {
-      match = cat.name.toLowerCase().includes(q) || cat.slug.toLowerCase().includes(q);
-    }
-    if (match && statusFilter !== "all") {
-      match = statusFilter === "active" ? cat.is_active : !cat.is_active;
-    }
-    return match;
-  });
+  let query = supabase
+    .from("categories")
+    .select(`*, category_attributes(*)`, { count: "exact" })
+    .order("sort_order", { ascending: true })
+    .limit(50);
+
+  if (q) {
+      query = query.or(`name.ilike.%${q.replace(/[\\%_]/g, "\\$&")}%,slug.ilike.%${q.replace(/[\\%_]/g, "\\$&")}%`);
+  }
+
+  if (statusFilter !== "all") {
+      query = query.eq("is_active", statusFilter === "active");
+  }
+
+  const { data: filteredCategories, count } = await query;
+  const safeCategories = filteredCategories || [];
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 space-y-8">
@@ -116,18 +116,18 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
           <h2 className="text-base font-bold text-gray-900">Current Categories</h2>
           <span className="text-xs text-gray-500 font-medium bg-white px-2.5 py-1 rounded-full border border-gray-200 shadow-sm">
-            {filteredCategories.length} result{filteredCategories.length === 1 ? "" : "s"}
+            {count || safeCategories.length} result{(count || safeCategories.length) === 1 ? "" : "s"}
           </span>
         </div>
 
-        {filteredCategories.length === 0 ? (
+        {safeCategories.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-sm text-gray-500">No categories found matching your criteria.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200 p-2 sm:p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCategories.map((cat) => (
+              {safeCategories.map((cat) => (
                 <div key={cat.id} className="flex flex-col justify-between border border-gray-100 bg-white rounded-lg p-4 shadow-sm hover:shadow transition-shadow">
                   <div className="space-y-2 mb-4">
                     <div className="flex items-start justify-between gap-2">

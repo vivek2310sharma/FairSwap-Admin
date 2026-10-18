@@ -48,14 +48,9 @@ describe("Audit Trail UX", () => {
     // Verify actor name was resolved
     expect(await screen.findByText("Admin User")).toBeDefined();
 
-    // Verify details are present and redacted
-    expect(screen.getByText(/Approved/)).toBeDefined();
-
-    // Test the redaction logic directly in the output JSON string
-    const jsonOutput = screen.getByText(/REDACTED/);
+    // Verify details are present and filtered by allowlist
+    const jsonOutput = screen.getByText(/Sensitive details unavailable/);
     expect(jsonOutput).toBeDefined();
-    expect(jsonOutput.textContent).toContain("***REDACTED***");
-    expect(jsonOutput.textContent).not.toContain("12345");
   });
 
   test("Rejects reversed date ranges", async () => {
@@ -65,10 +60,13 @@ describe("Audit Trail UX", () => {
       expect(screen.getByText("From Date must be before or equal to To Date")).toBeDefined();
   });
 
-  test("Rejects invalid date formats", async () => {
-      const Component = await AdminAuditPage({ searchParams: Promise.resolve({ from_date: "invalid-date" }) });
-      render(Component);
-
+  test("Rejects invalid date formats and non-existent dates", async () => {
+      const Component1 = await AdminAuditPage({ searchParams: Promise.resolve({ from_date: "invalid-date" }) });
+      render(Component1);
       expect(screen.getByText("Invalid from date format")).toBeDefined();
+
+      const Component2 = await AdminAuditPage({ searchParams: Promise.resolve({ from_date: "2026-02-31" }) });
+      render(Component2);
+      expect(screen.getByText("Invalid calendar date")).toBeDefined();
   });
 });

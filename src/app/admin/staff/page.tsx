@@ -17,34 +17,29 @@ export default async function AdminStaffPage() {
     .from("staff_roles")
     .select("*")
     .order("assigned_at", { ascending: false })
+    .limit(100)
     .returns<StaffRoleRecord[]>();
 
-  // Resolve user details using admin_search_users for each staff member
-  // Note: For a very large staff directory, this N+1 approach would need a backend batched lookup.
-  // Since staff directories are typically small, we boundedly resolve what we can.
-  const resolvedStaff = await Promise.all(
-    (staffList || []).map(async (staff) => {
+  // Deduplicate and bound the N+1 lookups
+  const uniqueStaffIds = Array.from(new Set((staffList || []).map(s => s.user_id))).slice(0, 100);
+  const staffDetailsMap = new Map<string, { display_name?: string, email?: string }>();
+
+  await Promise.all(uniqueStaffIds.map(async (id) => {
       try {
-        const { data } = await supabase.rpc("admin_search_users", {
-          p_query: staff.user_id,
-          p_limit: 1,
-          p_offset: 0,
-        });
-        const userDetails = data && data.length > 0 ? data[0] : null;
-        return {
-          ...staff,
-          display_name: userDetails?.display_name as string | undefined,
-          email: userDetails?.email as string | undefined,
-        };
-      } catch {
-        return {
-          ...staff,
-          display_name: undefined,
-          email: undefined,
-        };
-      }
-    })
-  );
+          const { data } = await supabase.rpc("admin_search_users", { p_query: id, p_limit: 1, p_offset: 0 });
+          if (data && data.length > 0) {
+              staffDetailsMap.set(id, { display_name: data[0].display_name, email: data[0].email });
+          }
+      } catch { /* ignore */ }
+  }));
+
+  const resolvedStaff = (staffList || []).map(staff => ({
+      ...staff,
+      display_name: staffDetailsMap.get(staff.user_id)?.display_name,
+      email: staffDetailsMap.get(staff.user_id)?.email
+  }));
+
+  const isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -59,7 +54,7 @@ export default async function AdminStaffPage() {
         {/* Assignment Form */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-gray-900">Assign / Update Role</h2>
-          <StaffForm />
+          <StaffForm isProduction={isProduction} />
         </div>
 
         {/* Staff Table */}
@@ -105,7 +100,9 @@ export default async function AdminStaffPage() {
                           <input type="hidden" name="targetUserId" value={staff.user_id} />
                           <button
                             type="submit"
-                            className="rounded border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
+                            disabled={isProduction}
+                            className="rounded border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={isProduction ? "Production mutation disabled" : "Revoke role"}
                           >
                             Revoke
                           </button>

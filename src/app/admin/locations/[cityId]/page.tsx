@@ -6,6 +6,10 @@ import { manageLocationAction } from "../actions";
 import type { Locality } from "@/types/listing";
 import { loadLocalities } from "@/lib/admin/locations";
 
+import { z } from "zod";
+
+const uuidSchema = z.string().uuid();
+
 export default async function AdminCityLocalitiesPage({ params, searchParams }: { params: Promise<{ cityId: string }>; searchParams: Promise<{ q?: string; page?: string }> }) {
   const supabase = await pageClient(["administrator"]);
 
@@ -33,9 +37,40 @@ export default async function AdminCityLocalitiesPage({ params, searchParams }: 
   }
 
   const { cityId } = await params;
+
+  if (!uuidSchema.safeParse(cityId).success) {
+      return (
+          <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 space-y-8 text-center text-gray-500">
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Invalid City ID</h1>
+              <p>The requested city identifier is malformed.</p>
+              <Link href="/admin/locations" className="text-emerald-600 font-semibold hover:underline">Return to Locations</Link>
+          </div>
+      )
+  }
+
   const resolvedSearchParams = await searchParams;
 
-  const { city, localities, hasMore, total, page, q } = await loadLocalities(supabase, cityId, resolvedSearchParams);
+  let city, localities, hasMore, total, page, q;
+  try {
+      const result = await loadLocalities(supabase, cityId, resolvedSearchParams);
+      city = result.city;
+      localities = result.localities;
+      hasMore = result.hasMore;
+      total = result.total;
+      page = result.page;
+      q = result.q;
+  } catch (err: unknown) {
+      if (err instanceof Error && err.message === "City not found.") {
+          return (
+            <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 space-y-8 text-center text-gray-500">
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">City Not Found</h1>
+                <p>The requested city could not be located in the system.</p>
+                <Link href="/admin/locations" className="text-emerald-600 font-semibold hover:underline">Return to Locations</Link>
+            </div>
+          )
+      }
+      throw err;
+  }
 
   const pageLink = (number: number) => `/admin/locations/${cityId}?${new URLSearchParams({ q, page: String(number) })}`;
 

@@ -7,7 +7,7 @@ import type { Database } from "@/types/database";
 
 type UserResult = Database["public"]["Functions"]["admin_search_users"]["Returns"][0];
 
-export default function StaffForm() {
+export default function StaffForm({ isProduction = false }: { isProduction?: boolean }) {
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("moderator");
 
@@ -89,16 +89,18 @@ export default function StaffForm() {
 
         <button
           type="submit"
-          disabled={!selectedUser || isPending}
-          className="w-full rounded-md bg-emerald-600 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50"
+          disabled={!selectedUser || isPending || isProduction}
+          className="w-full rounded-md bg-emerald-600 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? "Assigning..." : "Assign Staff Role"}
         </button>
       </form>
 
-      <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 mt-4">
-        <strong>Note:</strong> Production staff role assignment and revocation are currently disabled by backend policy. This interface operates in Test environments only.
-      </p>
+      {isProduction && (
+          <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 mt-4">
+            <strong>Note:</strong> Production staff role assignment and revocation are currently disabled by backend policy. This interface operates in Test environments only.
+          </p>
+      )}
     </div>
   );
 }

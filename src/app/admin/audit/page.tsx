@@ -13,13 +13,18 @@ interface AuditLogRecord {
   created_at: string;
 }
 
+const isValidDate = (dateStr: string) => {
+  const d = new Date(dateStr);
+  return !isNaN(d.getTime()) && d.toISOString().startsWith(dateStr);
+};
+
 const auditParamsSchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  action: z.string().trim().optional(),
-  target_entity: z.string().trim().optional(),
+  page: z.coerce.number().int().min(1).max(10000).optional().default(1),
+  action: z.string().trim().max(100).optional(),
+  target_entity: z.string().trim().max(100).optional(),
   actor_id: z.string().uuid().optional().or(z.literal('')),
-  from_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid from date format").optional().or(z.literal('')),
-  to_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid to date format").optional().or(z.literal('')),
+  from_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid from date format").refine(isValidDate, "Invalid calendar date").optional().or(z.literal('')),
+  to_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid to date format").refine(isValidDate, "Invalid calendar date").optional().or(z.literal('')),
 }).refine(data => {
     if (data.from_date && data.to_date) {
         return new Date(data.from_date) <= new Date(data.to_date);
@@ -27,21 +32,28 @@ const auditParamsSchema = z.object({
     return true;
 }, { message: "From Date must be before or equal to To Date", path: ["from_date"] });
 
-const SENSITIVE_KEYS = ["token", "password", "upi", "api_key", "secret", "recovery", "session", "mfa"];
+const ALLOWED_DETAIL_KEYS = new Set([
+  "reason", "expected_status", "new_status", "role",
+  "action", "name", "slug", "description", "is_active",
+  "sort_order", "city_id", "locality_id", "state"
+]);
 
-function redactDetails(details: Record<string, unknown> | null | undefined): Record<string, unknown> {
-  if (!details || typeof details !== "object") return {};
-  const redacted: Record<string, unknown> = {};
+function redactDetails(details: Record<string, unknown> | null | undefined): Record<string, unknown> | string {
+  if (!details || typeof details !== "object" || Array.isArray(details)) return "Sensitive details unavailable";
+
+  const safeDetails: Record<string, unknown> = {};
+  let hasContent = false;
+
   for (const [key, value] of Object.entries(details)) {
-    if (SENSITIVE_KEYS.some((sensitive) => key.toLowerCase().includes(sensitive))) {
-      redacted[key] = "***REDACTED***";
-    } else if (typeof value === "object" && value !== null) {
-      redacted[key] = redactDetails(value as Record<string, unknown>);
-    } else {
-      redacted[key] = value;
+    if (ALLOWED_DETAIL_KEYS.has(key)) {
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) {
+        safeDetails[key] = value;
+        hasContent = true;
+      }
     }
   }
-  return redacted;
+
+  return hasContent ? safeDetails : "Sensitive details unavailable";
 }
 
 export default async function AdminAuditPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -56,12 +68,16 @@ export default async function AdminAuditPage({ searchParams }: { searchParams: P
   const { page, action, target_entity, actor_id, from_date, to_date } = safeData;
   const pageSize = 50;
 
-  let query = supabase
-    .from("audit_logs")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false });
+  let auditLogs: AuditLogRecord[] = [];
+  let error = null;
+  let count = 0;
 
   if (parsedParams.success) {
+    let query = supabase
+      .from("audit_logs")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false });
+
     if (action && action !== "all") {
       query = query.eq("action", action);
     }
@@ -81,31 +97,33 @@ export default async function AdminAuditPage({ searchParams }: { searchParams: P
       const nextDay = new Date(new Date(`${to_date}T00:00:00+05:30`).getTime() + 24 * 60 * 60 * 1000);
       query = query.lt("created_at", nextDay.toISOString());
     }
+
+    const result = await query.range((page - 1) * pageSize, page * pageSize - 1).returns<AuditLogRecord[]>();
+    auditLogs = result.data || [];
+    error = result.error;
+    count = result.count || 0;
   }
 
-  const { data: auditLogs, error, count } = await query
-    .range((page - 1) * pageSize, page * pageSize - 1)
-    .returns<AuditLogRecord[]>();
-
-  const totalRecords = count || 0;
+  const totalRecords = count;
   const hasNextPage = totalRecords > page * pageSize;
 
-  // Attempt to resolve actor identities safely
-  const resolvedLogs = await Promise.all(
-    (auditLogs || []).map(async (log) => {
+  // Cap unique actor lookups to 10 to bound N+1 queries.
+  const uniqueActorIds = Array.from(new Set(auditLogs.map(l => l.actor_id))).slice(0, 10);
+  const actorMap = new Map<string, string | null>();
+
+  if (parsedParams.success) {
+    await Promise.all(uniqueActorIds.map(async (id) => {
       try {
-        const { data } = await supabase.rpc("admin_search_users", {
-          p_query: log.actor_id,
-          p_limit: 1,
-          p_offset: 0,
-        });
-        const actorName = data && data.length > 0 ? data[0].display_name : null;
-        return { ...log, actor_name: actorName };
-      } catch {
-        return { ...log, actor_name: null };
-      }
-    })
-  );
+        const { data } = await supabase.rpc("admin_search_users", { p_query: id, p_limit: 1, p_offset: 0 });
+        if (data && data.length > 0) actorMap.set(id, data[0].display_name);
+      } catch { /* ignore */ }
+    }));
+  }
+
+  const resolvedLogs = auditLogs.map(log => ({
+    ...log,
+    actor_name: actorMap.get(log.actor_id) || null
+  }));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-6">
