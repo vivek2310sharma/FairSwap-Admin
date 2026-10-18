@@ -196,13 +196,13 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                       <div className="font-medium text-gray-900">
                         {u.display_name || "Unnamed User"}
                       </div>
-                      <div className="text-sm text-gray-500">{u.email}</div>
+                      <div className="text-sm text-gray-500 min-w-0 break-words">{u.email}</div>
                     </div>
                     <div>{getStatusBadge(u.account_status)}</div>
                   </div>
-                  <div className="text-xs text-gray-500 mb-3 space-y-1">
+                  <div className="text-xs text-gray-500 mb-3 space-y-1 min-w-0">
                     <div className="font-mono text-[10px] text-gray-400 truncate">ID: {u.user_id}</div>
-                    <div>Registered: {new Date(u.created_at).toLocaleDateString()}</div>
+                    <div>Registered: {new Date(u.created_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</div>
                     <div className="flex items-center gap-2">
                       <span>Listings: <span className="font-medium text-gray-700">{u.listings_count}</span></span>
                       {u.role && (
@@ -248,7 +248,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                         <div className="font-medium text-gray-900">
                           {u.display_name || "Unnamed User"}
                         </div>
-                        <div className="text-xs text-gray-500">{u.email}</div>
+                        <div className="text-xs text-gray-500 break-words">{u.email}</div>
                         <div className="font-mono text-[11px] text-gray-400 mt-0.5">{u.user_id}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -268,7 +268,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                         {u.listings_count}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                        {new Date(u.created_at).toLocaleDateString()}
+                        {new Date(u.created_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <Link

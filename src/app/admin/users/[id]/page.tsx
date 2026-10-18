@@ -8,6 +8,7 @@ import type { AdminUserSearchResult } from "../page";
 import type { Database } from "@/types/database";
 import { z } from "zod";
 import { readAuthConfig } from "@/lib/auth/runtime-config";
+import { reconcileListingCounts } from "@/lib/admin/support-user";
 
 export const metadata: Metadata = {
   title: "User Details & Moderation — FairSwap Admin",
@@ -94,6 +95,18 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
     rejected: null,
   };
 
+  let rlsVisibleTotal: number | null = null;
+
+  try {
+    const { count } = await supabase
+      .from("listings")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_id", targetUserId);
+    rlsVisibleTotal = count;
+  } catch {
+    rlsVisibleTotal = null;
+  }
+
   await Promise.all(
     validListingStatuses.map(async (st) => {
       try {
@@ -112,10 +125,9 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
   const exactCountsAvailable = Object.values(counts).every((c) => c !== null);
 
   // Reconcile with total listings
-  const totalCount = targetUser.listings_count;
-  const countedSum = exactCountsAvailable ? Object.values(counts).reduce((acc: number, val) => acc + (val as number), 0) : 0;
-  const otherCount = exactCountsAvailable ? totalCount - countedSum : null;
-  const isFullyReconciled = exactCountsAvailable && otherCount !== null && otherCount >= 0;
+  const rpcTotalCount = targetUser.listings_count;
+
+  const { isFullyReconciled, otherCount } = reconcileListingCounts(counts, rlsVisibleTotal, rpcTotalCount);
 
   // Tab 2: Fetch reports against this user
   const { data: reports } = await supabase
