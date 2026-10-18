@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { pageClient } from "@/lib/admin/server";
 import { manageCategoryAction } from "./actions";
 
-export default async function AdminCategoriesPage() {
+export default async function AdminCategoriesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const supabase = await pageClient(["administrator","content_editor"]);
 
   const {
@@ -31,14 +31,28 @@ export default async function AdminCategoriesPage() {
     redirect("/admin");
   }
 
-  const { data: categories } = await supabase
-    .from("categories")
-    .select(`
-      *,
-      category_attributes(*)
-    `)
-    .order("sort_order", { ascending: true });
+  const resolvedParams = await searchParams;
+  const q = typeof resolvedParams.q === "string" ? resolvedParams.q.trim().slice(0, 100) : "";
+  const statusFilter = ["active", "inactive", "all"].includes(typeof resolvedParams.status === "string" ? resolvedParams.status : "")
+      ? resolvedParams.status
+      : "all";
 
+  let query = supabase
+    .from("categories")
+    .select(`*, category_attributes(*)`, { count: "exact" })
+    .order("sort_order", { ascending: true })
+    .limit(50);
+
+  if (q) {
+      query = query.or(`name.ilike.%${q.replace(/[\\%_]/g, "\\$&")}%,slug.ilike.%${q.replace(/[\\%_]/g, "\\$&")}%`);
+  }
+
+  if (statusFilter !== "all") {
+      query = query.eq("is_active", statusFilter === "active");
+  }
+
+  const { data: filteredCategories, count } = await query;
+  const safeCategories = filteredCategories || [];
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 space-y-8">
@@ -52,59 +66,127 @@ export default async function AdminCategoriesPage() {
         </p>
       </div>
 
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <form method="get" className="flex flex-col sm:flex-row gap-4 items-end">
+          <div className="flex-1">
+            <label htmlFor="q" className="block text-xs font-semibold text-gray-700 mb-1">Search Categories</label>
+            <input
+              type="text"
+              id="q"
+              name="q"
+              defaultValue={q}
+              placeholder="Search by name or slug..."
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+          </div>
+          <div className="w-full sm:w-48">
+            <label htmlFor="status" className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
+            <select
+              id="status"
+              name="status"
+              defaultValue={statusFilter}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Disabled</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              Filter
+            </button>
+            {(q || statusFilter !== "all") && (
+              <Link
+                href="/admin/categories"
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 flex items-center justify-center"
+              >
+                Reset
+              </Link>
+            )}
+          </div>
+        </form>
+      </div>
+
       {/* Categories table */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-4">
-        <h2 className="text-base font-bold text-gray-900">Current Categories</h2>
-        <div className="divide-y divide-gray-200">
-          {categories?.map((cat) => (
-            <div key={cat.id} className="py-4 flex flex-col sm:flex-row justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-gray-900 text-sm">{cat.name}</h3>
-                  <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
-                    {cat.slug}
-                  </code>
-                  <span
-                    className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                      cat.is_active ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {cat.is_active ? "Active" : "Disabled"}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">{cat.description || "No description"}</p>
-
-                {/* Attributes list */}
-                <div className="mt-2 flex flex-wrap gap-1.5 pt-1">
-                  {cat.category_attributes?.map((attr) => (
-                    <span
-                      key={attr.id}
-                      className="inline-flex items-center rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-700"
-                    >
-                      {attr.label} ({attr.value_type})
-                      {attr.is_required && <span className="text-red-500 ml-0.5">*</span>}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Status toggle form */}
-              <div className="flex items-center">
-                <AdminMutationForm mutation={manageCategoryAction} confirm="Confirm this configuration change?">
-                  <input type="hidden" name="action" value="update" />
-                  <input type="hidden" name="category_id" value={cat.id} />
-                  <input type="hidden" name="is_active" value={(!cat.is_active).toString()} />
-                  <button
-                    type="submit"
-                    className="rounded border border-gray-300 bg-white px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                  >
-                    {cat.is_active ? "Deactivate" : "Activate"}
-                  </button>
-                </AdminMutationForm>
-              </div>
-            </div>
-          ))}
+      <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+          <h2 className="text-base font-bold text-gray-900">Current Categories</h2>
+          <span className="text-xs text-gray-500 font-medium bg-white px-2.5 py-1 rounded-full border border-gray-200 shadow-sm">
+            {count === null ? "Total unavailable" : `Showing ${safeCategories.length} of ${count}`}
+          </span>
         </div>
+
+        {safeCategories.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-sm text-gray-500">No categories found matching your criteria.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200 p-2 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {safeCategories.map((cat) => (
+                <div key={cat.id} className="flex flex-col justify-between border border-gray-100 bg-white rounded-lg p-4 shadow-sm hover:shadow transition-shadow">
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-sm truncate" title={cat.name}>{cat.name}</h3>
+                        <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 inline-block mt-1 truncate max-w-full" title={cat.slug}>
+                          {cat.slug}
+                        </code>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                          cat.is_active ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {cat.is_active ? "Active" : "Disabled"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 line-clamp-2" title={cat.description || "No description"}>{cat.description || "No description"}</p>
+
+                    {/* Attributes list */}
+                    <div className="mt-2 flex flex-wrap gap-1 pt-2 border-t border-gray-50">
+                      {cat.category_attributes?.length ? cat.category_attributes.map((attr) => (
+                        <span
+                          key={attr.id}
+                          className="inline-flex items-center rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] text-gray-600"
+                          title={`${attr.label} (${attr.value_type})`}
+                        >
+                          {attr.label}
+                          {attr.is_required && <span className="text-red-500 ml-0.5">*</span>}
+                        </span>
+                      )) : (
+                        <span className="text-[10px] text-gray-400 italic">No attributes defined</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status toggle form */}
+                  <div className="pt-3 border-t border-gray-100 mt-auto flex justify-end">
+                    <AdminMutationForm mutation={manageCategoryAction} confirm="Confirm this configuration change?">
+                      <input type="hidden" name="action" value="update" />
+                      <input type="hidden" name="category_id" value={cat.id} />
+                      <input type="hidden" name="is_active" value={(!cat.is_active).toString()} />
+                      <button
+                        type="submit"
+                        className={`rounded border px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                          cat.is_active
+                            ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        }`}
+                      >
+                        {cat.is_active ? "Deactivate Category" : "Activate Category"}
+                      </button>
+                    </AdminMutationForm>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add Category Form */}

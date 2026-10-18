@@ -1,9 +1,9 @@
 # FairSwap Admin — Phase 2 Operational UX Plan
 
 Date: 2026-10-18
-Status: Owner authorized for **Phase 2A** and **Phase 2B** only; implementation pending
+Status: Owner authorized for **Phase 2B-2E**; Phase 2A complete and merged.
 Integration: `staging` (Test) only; no Production release
-Baseline: PR #13 merged into `staging` as `8f5e65fb03f3ad7bfab698eb4e01d3456acaecb5`
+Baseline: PR #16 merged into `staging`
 Implementation lead: Antigravity oversight, Google Jules as scoped frontend implementation agent
 
 ## Why
@@ -38,7 +38,7 @@ Make FairSwap's Trust & Safety and staff operations more usable than generic cla
 - Responsive desktop/mobile layouts with accessible labels/focus and obvious actions.
 - Tests for status/limited-result truthfulness, filters, role visibility, and current Production disable states.
 
-## Phase 2B — Staff Management (separate Jules task and PR)
+## Phase 2B — Staff Management
 
 **Affected files (expected):** `src/app/admin/staff/page.tsx`, `src/app/admin/staff/staff-form.tsx`, read-only guarded lookup helper if needed, and tests.
 
@@ -49,6 +49,33 @@ Make FairSwap's Trust & Safety and staff operations more usable than generic cla
 4. Style assignment/revocation clearly and keep Production mutation disables intact; show current role, assignment date, and role safely.
 5. Add tests for ambiguous matches, error/no-result states, role permission boundaries, and privileged mutation confirmation.
 
+## Phase 2C — Audit Trail
+
+**Affected file (expected):** `src/app/admin/audit/page.tsx`
+
+### Experience
+1. Create a professional, responsive layout displaying timestamp, actor identity (if safe to resolve), action type, target entity/ID, event summary, and safe details.
+2. Provide server-side filtering for action type, target entity, actor ID, and safe pagination. Validate parameters with Zod.
+3. Render approved, non-sensitive detail fields. Never indiscriminately expose raw JSON containing secrets.
+
+## Phase 2D — Category Management
+
+**Affected file (expected):** `src/app/admin/categories/page.tsx`
+
+### Experience
+1. Implement search by category name/slug, and active/inactive filtering.
+2. Create a responsive mobile-friendly list/card view with readable descriptions and attribute summaries.
+3. Present existing permitted actions (create, toggle status) safely with clear error handling. Schema editing remains unavailable.
+
+## Phase 2E — Location Management
+
+**Affected files (expected):** `src/app/admin/locations/page.tsx`, `src/lib/admin/locations.ts`
+
+### Experience
+1. Provide a searchable city directory with active/inactive state, better grouping, and pagination.
+2. Allow safe, efficient inspection of a city's localities beyond the initial 25, via expandable view or dedicated read-only route.
+3. Maintain existing city/locality mutation contracts with clearer identifiers for associated localities.
+
 ## Security / ownership
 - Admin owns interface and its guarded, **read-only** query assembly.
 - No schema/migration/RLS/ACL/privileged RPC/Edge Function changes. Backend-owned changes, if truly needed, need a separate security-reviewed proposal in the canonical backend source and all-client impact assessment.
@@ -58,8 +85,6 @@ Make FairSwap's Trust & Safety and staff operations more usable than generic cla
 - Do not change the existing privileged staff or account-status mutation contracts.
 
 ## Work and review sequence
-1. Jules Phase 2A UX implementation and tests; PR targeting `staging`, unmerged. If Jules cannot originate from `staging`, keep its source PR unmerged and let the CTO port **only** the intended UI changes onto a staging-based PR as in Phase 1.
+1. Jules Phase 2B-2E UX implementation and tests; PR targeting `staging`, unmerged.
 2. Run pinned `pnpm typecheck`, `pnpm lint`, `pnpm test:unit`, `pnpm build`; assess 320/390/768/1280px, keyboard access, error/empty states, and authorized Test account roles.
-3. Owner reviews then merges Phase 2A to `staging` after Test acceptance.
-4. Repeat as a **separate** Phase 2B PR with stricter staff identity and action safety checks.
-5. Audit Trail, Categories, and Locations improvements are **future proposals**, not included in Phase 2A/2B authorization.
+3. Owner reviews then merges Phase 2B-2E to `staging` after Test acceptance.
