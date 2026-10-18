@@ -119,9 +119,6 @@ describe("Staff Management UX", () => {
     // Mock confirm to return false
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
-    // Create an event object that we can spy on preventDefault
-    const submitEvent = new Event('submit', { cancelable: true });
-
     // Instead of using fireEvent which might suppress some react handling, test the form onSubmit directly, or mock the event.
     fireEvent.submit(assignButton.closest('form') as HTMLFormElement);
 

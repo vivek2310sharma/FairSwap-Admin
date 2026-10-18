@@ -81,7 +81,7 @@ describe("Audit Trail UX", () => {
         }),
       }),
       rpc: vi.fn().mockResolvedValue({ data: [] }),
-    } as any);
+    } as unknown as ReturnType<typeof pageClient> extends Promise<infer U> ? U : never);
 
     const Component = await AdminAuditPage({ searchParams: Promise.resolve({}) });
     render(Component);
@@ -129,7 +129,7 @@ describe("Audit Trail UX", () => {
       vi.mocked(pageClient).mockResolvedValueOnce({
           from: fromSpy,
           rpc: vi.fn().mockResolvedValue({ data: [] }),
-      } as any);
+      } as unknown as ReturnType<typeof pageClient> extends Promise<infer U> ? U : never);
 
       // Use 2026-10-18.
       // Expected fromUTC: 2026-10-17T18:30:00.000Z
