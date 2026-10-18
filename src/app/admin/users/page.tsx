@@ -186,59 +186,103 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
-              <thead className="bg-gray-50">
-                <tr className="text-xs font-semibold uppercase text-gray-500">
-                  <th scope="col" className="px-6 py-3">User</th>
-                  <th scope="col" className="px-6 py-3">Account Status</th>
-                  <th scope="col" className="px-6 py-3">Role</th>
-                  <th scope="col" className="px-6 py-3">Listings</th>
-                  <th scope="col" className="px-6 py-3">Registered</th>
-                  <th scope="col" className="px-6 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
-                {userList.map((u) => (
-                  <tr key={u.user_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
+          <div className="overflow-hidden">
+            {/* Mobile View: Cards */}
+            <div className="block sm:hidden divide-y divide-gray-100">
+              {userList.map((u) => (
+                <div key={u.user_id} className="p-4 bg-white hover:bg-gray-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
                       <div className="font-medium text-gray-900">
                         {u.display_name || "Unnamed User"}
                       </div>
-                      <div className="text-xs text-gray-500">{u.email}</div>
-                      <div className="font-mono text-[11px] text-gray-400 mt-0.5">{u.user_id}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(u.account_status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {u.role ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700">
-                          <Shield className="h-3 w-3" />
-                          {u.role}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">User</span>
+                      <div className="text-sm text-gray-500 min-w-0 break-words">{u.email}</div>
+                    </div>
+                    <div>{getStatusBadge(u.account_status)}</div>
+                  </div>
+                  <div className="text-xs text-gray-500 mb-3 space-y-1 min-w-0">
+                    <div className="font-mono text-[10px] text-gray-400 truncate">ID: {u.user_id}</div>
+                    <div>Registered: {new Date(u.created_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</div>
+                    <div className="flex items-center gap-2">
+                      <span>Listings: <span className="font-medium text-gray-700">{u.listings_count}</span></span>
+                      {u.role && (
+                        <>
+                          <span className="text-gray-300">&bull;</span>
+                          <span className="inline-flex items-center gap-1 rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700">
+                            <Shield className="h-2.5 w-2.5" />
+                            {u.role}
+                          </span>
+                        </>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                      {u.listings_count}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                      {new Date(u.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <Link
-                        href={`/admin/users/${u.user_id}`}
-                        className="font-semibold text-emerald-600 hover:text-emerald-500"
-                      >
-                        Inspect &rarr;
-                      </Link>
-                    </td>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <Link
+                      href={`/admin/users/${u.user_id}`}
+                      className="inline-flex items-center text-sm font-semibold text-emerald-600 hover:text-emerald-500"
+                    >
+                      Inspect User &rarr;
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
+                <thead className="bg-gray-50">
+                  <tr className="text-xs font-semibold uppercase text-gray-500">
+                    <th scope="col" className="px-6 py-3">User</th>
+                    <th scope="col" className="px-6 py-3">Account Status</th>
+                    <th scope="col" className="px-6 py-3">Role</th>
+                    <th scope="col" className="px-6 py-3">Listings</th>
+                    <th scope="col" className="px-6 py-3">Registered</th>
+                    <th scope="col" className="px-6 py-3 text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {userList.map((u) => (
+                    <tr key={u.user_id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900">
+                          {u.display_name || "Unnamed User"}
+                        </div>
+                        <div className="text-xs text-gray-500 break-words">{u.email}</div>
+                        <div className="font-mono text-[11px] text-gray-400 mt-0.5">{u.user_id}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getStatusBadge(u.account_status)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {u.role ? (
+                          <span className="inline-flex items-center gap-1 rounded bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                            <Shield className="h-3 w-3" />
+                            {u.role}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">User</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                        {u.listings_count}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                        {new Date(u.created_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <Link
+                          href={`/admin/users/${u.user_id}`}
+                          className="font-semibold text-emerald-600 hover:text-emerald-500"
+                        >
+                          Inspect &rarr;
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
