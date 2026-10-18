@@ -5,7 +5,9 @@ import { ChevronLeft, Shield, User, Package, AlertTriangle, FileText, Calendar, 
 import type { Metadata } from "next";
 import UserStatusForm from "../user-status-form";
 import type { AdminUserSearchResult } from "../page";
+import type { Database } from "@/types/database";
 import { z } from "zod";
+import { readAuthConfig } from "@/lib/auth/runtime-config";
 
 export const metadata: Metadata = {
   title: "User Details & Moderation — FairSwap Admin",
@@ -14,13 +16,13 @@ export const metadata: Metadata = {
 
 interface AdminUserDetailPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; listing_status?: string }>;
 }
 
 export default async function AdminUserDetailPage({ params, searchParams }: AdminUserDetailPageProps) {
   const { id: targetUserId } = await params;
   if (!z.string().uuid().safeParse(targetUserId).success) notFound();
-  const { tab = "listings" } = await searchParams;
+  const { tab = "listings", listing_status } = await searchParams;
   const supabase = await pageClient(["administrator","moderator"]);
 
   const { data: userData } = await supabase.auth.getUser();
@@ -38,6 +40,9 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
   if (!callerStaff || !["administrator", "moderator"].includes(callerStaff.role)) {
     redirect("/admin");
   }
+
+  const config = readAuthConfig();
+  const isProduction = config?.environment === "production";
 
   // Fetch target user via search RPC (authoritative for safe email extraction)
   const { data: rawTargetUsers, error: searchError } = await supabase.rpc("admin_search_users", {
@@ -63,13 +68,44 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
     ? "Moderators cannot modify staff accounts."
     : undefined;
 
+  type ListingStatus = Database["public"]["Enums"]["listing_status_enum"];
+  const validListingStatuses: ListingStatus[] = ["active", "pending_review", "sold", "rejected"];
+  const listingStatusFilter = validListingStatuses.includes(listing_status as ListingStatus) ? (listing_status as ListingStatus) : undefined;
+
   // Tab 1: Fetch user listings
-  const { data: listings } = await supabase
+  let listingsQuery = supabase
     .from("listings")
     .select("id, title, slug, status, price_paise, created_at")
-    .eq("seller_id", targetUserId)
+    .eq("seller_id", targetUserId);
+
+  if (listingStatusFilter) {
+    listingsQuery = listingsQuery.eq("status", listingStatusFilter);
+  }
+
+  const { data: listings } = await listingsQuery
     .order("created_at", { ascending: false })
     .limit(30);
+
+  // Listing Status Counts
+  const counts: Record<string, number | null> = {
+    active: null,
+    pending_review: null,
+    sold: null,
+    rejected: null,
+  };
+
+  await Promise.all(
+    validListingStatuses.map(async (st) => {
+      const { count } = await supabase
+        .from("listings")
+        .select("id", { count: "exact", head: true })
+        .eq("seller_id", targetUserId)
+        .eq("status", st);
+      counts[st] = count;
+    })
+  );
+
+  const exactCountsAvailable = Object.values(counts).every((c) => c !== null);
 
   // Tab 2: Fetch reports against this user
   const { data: reports } = await supabase
@@ -184,12 +220,33 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
 
           <div className="mt-6 pt-4 border-t border-gray-100">
             <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">Listing Status Breakdown</h3>
-            <div className="rounded-md bg-gray-50 p-3 text-xs text-gray-600 border border-gray-100">
-              <p className="flex items-start gap-1.5">
-                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                <span>Exact server-side counts by status (Active, Sold, Pending Review, Rejected) are currently unavailable due to backend limitations preventing bounded grouped aggregates.</span>
-              </p>
-            </div>
+            {exactCountsAvailable ? (
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 bg-gray-50 p-3 rounded-md border border-gray-100">
+                <div className="flex flex-col">
+                  <dt className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Active</dt>
+                  <dd className="text-sm font-bold text-emerald-700">{counts.active}</dd>
+                </div>
+                <div className="flex flex-col">
+                  <dt className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Pending</dt>
+                  <dd className="text-sm font-bold text-amber-700">{counts.pending_review}</dd>
+                </div>
+                <div className="flex flex-col">
+                  <dt className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Sold</dt>
+                  <dd className="text-sm font-bold text-blue-700">{counts.sold}</dd>
+                </div>
+                <div className="flex flex-col">
+                  <dt className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Rejected</dt>
+                  <dd className="text-sm font-bold text-red-700">{counts.rejected}</dd>
+                </div>
+              </dl>
+            ) : (
+              <div className="rounded-md bg-gray-50 p-3 text-xs text-gray-600 border border-gray-100">
+                <p className="flex items-start gap-1.5">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                  <span>Exact server-side counts by status are currently unavailable. The `admin_search_users` RPC provides total count, but accurate backend-owned grouping counts require RLS-compatible read functions.</span>
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -207,13 +264,14 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
             isSelf={isSelf}
             canModerate={canModerate}
             blockReason={blockReason}
+            isProduction={isProduction}
           />
         </div>
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-8">
+      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
+        <nav className="flex space-x-8 whitespace-nowrap min-w-max px-1">
           <Link
             href={`/admin/users/${targetUserId}?tab=listings`}
             className={`pb-4 px-1 text-sm font-medium border-b-2 flex items-center gap-2 ${
@@ -223,7 +281,7 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
             }`}
           >
             <Package className="h-4 w-4" />
-            User Listings ({listings?.length || 0})
+            Recent Listings ({listings?.length || 0})
           </Link>
 
           <Link
@@ -235,7 +293,7 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
             }`}
           >
             <AlertTriangle className="h-4 w-4" />
-            Safety Reports Against User ({reports?.length || 0})
+            Recent Safety Reports ({reports?.length || 0})
           </Link>
 
           <Link
@@ -255,16 +313,35 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
       {/* Tab Content */}
       {tab === "listings" && (
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recent listings — up to 30</h3>
+
+            <form method="get" className="flex items-center gap-2">
+              <input type="hidden" name="tab" value="listings" />
+              <label htmlFor="listing_status" className="sr-only">Filter by status</label>
+              <select
+                id="listing_status"
+                name="listing_status"
+                defaultValue={listingStatusFilter || "all"}
+                className="text-xs border-gray-300 rounded-md py-1.5 pl-3 pr-8 focus:border-emerald-500 focus:ring-emerald-500"
+                onChange={(e) => e.target.form?.submit()}
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="pending_review">Pending Review</option>
+                <option value="sold">Sold</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </form>
+          </div>
+
           {(!listings || listings.length === 0) ? (
             <div className="p-8 text-center text-sm text-gray-500">
-              No listings found for this user.
+              No listings found for this user with the current filter.
             </div>
           ) : (
-            <>
-            <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recent listings — up to 30</h3>
-            </div>
-            <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
               <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                 <tr>
                   <th scope="col" className="px-6 py-3">Listing</th>
@@ -277,7 +354,7 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
               <tbody className="divide-y divide-gray-100 bg-white">
                 {listings.map((l) => (
                   <tr key={l.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-900">
+                    <td className="px-6 py-4 font-medium text-gray-900 min-w-[200px]">
                       {l.title}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -289,7 +366,7 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                       {l.price_paise !== null ? `₹${(l.price_paise / 100).toFixed(2)}` : "Free"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                      {new Date(l.created_at).toLocaleDateString()}
+                      {new Date(l.created_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                       <Link
@@ -303,7 +380,7 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                 ))}
               </tbody>
             </table>
-            </>
+            </div>
           )}
         </div>
       )}
@@ -315,11 +392,12 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
               No reports have been filed against this user.
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
               <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                 <tr>
                   <th scope="col" className="px-6 py-3">Report ID</th>
-                  <th scope="col" className="px-6 py-3">Reason</th>
+                  <th scope="col" className="px-6 py-3 min-w-[200px]">Reason</th>
                   <th scope="col" className="px-6 py-3">Status</th>
                   <th scope="col" className="px-6 py-3">Created</th>
                   <th scope="col" className="px-6 py-3 text-right">Action</th>
@@ -341,7 +419,7 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                      {new Date(r.created_at).toLocaleString()}
+                      {new Date(r.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                       <Link
@@ -355,6 +433,7 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -384,7 +463,7 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                   {auditLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
-                        {new Date(log.created_at).toLocaleString()}
+                        {new Date(log.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className="font-mono text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">
