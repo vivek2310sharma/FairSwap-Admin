@@ -121,8 +121,10 @@ export default async function AdminAuditPage({ searchParams }: { searchParams: P
   if (parsedParams.success) {
     await Promise.all(uniqueActorIds.map(async (id) => {
       try {
-        const { data } = await supabase.rpc("admin_search_users", { p_query: id, p_limit: 1, p_offset: 0 });
-        if (data && data.length > 0) actorMap.set(id, data[0].display_name);
+        const { data, error } = await supabase.rpc("admin_search_users", { p_query: id, p_limit: 1, p_offset: 0 });
+        if (!error && data && data.length > 0 && data[0].user_id === id) {
+            actorMap.set(id, data[0].display_name);
+        }
       } catch { /* ignore */ }
     }));
   }

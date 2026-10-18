@@ -32,7 +32,7 @@ vi.mock("@/lib/admin/server", () => {
         }),
       }),
       rpc: vi.fn().mockResolvedValue({
-        data: [{ display_name: "Admin User", email: "admin@example.com" }],
+        data: [{ display_name: "Admin User", email: "admin@example.com", user_id: "00000000-0000-0000-0000-000000000001" }],
       }),
     }),
   };
@@ -80,7 +80,7 @@ describe("Audit Trail UX", () => {
           }),
         }),
       }),
-      rpc: vi.fn().mockResolvedValue({ data: [] }),
+      rpc: vi.fn().mockResolvedValue({ data: [{ display_name: "Admin User", email: "admin@example.com", user_id: "00000000-0000-0000-0000-000000000001" }] }),
     } as unknown as ReturnType<typeof pageClient> extends Promise<infer U> ? U : never);
 
     const Component = await AdminAuditPage({ searchParams: Promise.resolve({}) });
@@ -139,5 +139,41 @@ describe("Audit Trail UX", () => {
 
       expect(gteSpy).toHaveBeenCalledWith("created_at", "2026-10-17T18:30:00.000Z");
       expect(ltSpy).toHaveBeenCalledWith("created_at", "2026-10-18T18:30:00.000Z");
+  });
+
+  test("Falls back to Unknown when RPC returns mismatched user_id", async () => {
+      vi.mocked(pageClient).mockResolvedValueOnce({
+          from: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                  order: vi.fn().mockReturnValue({
+                      eq: vi.fn().mockReturnThis(),
+                      range: vi.fn().mockReturnValue({
+                          returns: vi.fn().mockResolvedValue({
+                              data: [
+                                  {
+                                      id: "3",
+                                      actor_id: "00000000-0000-0000-0000-000000000001",
+                                      action: "moderate_listing",
+                                      target_entity: "listings",
+                                      target_id: "listing-1",
+                                      details: {},
+                                      created_at: "2026-10-18T10:00:00Z",
+                                  }
+                              ],
+                              count: 1,
+                          })
+                      })
+                  })
+              })
+          }),
+          // Mock RPC returns a DIFFERENT user_id than the actor_id 000...001
+          rpc: vi.fn().mockResolvedValue({ data: [{ display_name: "Imposter User", user_id: "99999999-9999-9999-9999-999999999999" }] }),
+      } as unknown as ReturnType<typeof pageClient> extends Promise<infer U> ? U : never);
+
+      const Component = await AdminAuditPage({ searchParams: Promise.resolve({}) });
+      render(Component);
+
+      expect(screen.getByText("Unknown")).toBeDefined();
+      expect(screen.queryByText("Imposter User")).toBeNull();
   });
 });

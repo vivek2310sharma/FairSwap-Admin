@@ -120,7 +120,10 @@ describe("Staff Management UX", () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     // Instead of using fireEvent which might suppress some react handling, test the form onSubmit directly, or mock the event.
-    fireEvent.submit(assignButton.closest('form') as HTMLFormElement);
+    const form = assignButton.closest('form') as HTMLFormElement;
+
+    // Fire event to trigger onSubmit in React Testing Library
+    fireEvent.submit(form);
 
     // Verify confirm text
     expect(confirmSpy).toHaveBeenCalledWith(
@@ -130,6 +133,9 @@ describe("Staff Management UX", () => {
         "Email: test1@example.com\n" +
         "UUID: 00000000-0000-0000-0000-000000000001"
     );
+
+    // To verify that form submission was prevented, check the action state or URL
+    // In our mocked setup, searchUsersAction should NOT have been called due to form intercept.
 
     confirmSpy.mockRestore();
   });
