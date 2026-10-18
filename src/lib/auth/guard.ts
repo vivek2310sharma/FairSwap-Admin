@@ -8,7 +8,7 @@ import { diagnosticsFor, observeResult, sdkError } from "./diagnostics";
 export type Denial = "configuration" | "sign-in" | "denied" | "verification-error" | "mfa" | "policy-required" | "policy-error";
 export const STAFF_ROLES = ["administrator", "moderator", "support_agent", "content_editor"] as const;
 export type StaffRole = typeof STAFF_ROLES[number];
-export type StaffAccess = { allowed: true; userId: string; role: StaffRole; aal: "aal1" | "aal2" } |
+export type StaffAccess = { allowed: true; userId: string; role: StaffRole; aal: "aal1" | "aal2"; email?: string } |
   { allowed: false; reason: Denial };
 const claimsSchema = z.object({
   sub: z.string().uuid(),
@@ -100,7 +100,7 @@ export async function staffAccess(client: AdminClient, protectedAccess: boolean,
       }
     }
     diagnostics.emit("final", "ok");
-    return { allowed: true, userId: user.id, role, aal: parsed.data.aal };
+    return { allowed: true, userId: user.id, role, aal: parsed.data.aal, email: user.email };
   } catch (error) {
     diagnostics.emit(stage, "exception", error);
     return deny("verification-error");

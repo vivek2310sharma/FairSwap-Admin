@@ -1,5 +1,31 @@
 # Admin project rules
 
+## Active assignment — Admin UI/UX modernization (2026-10-18)
+
+**Owner authorization for Google Jules — Phase 1, UI only.** Jules may implement a modern, responsive FairSwap Admin application shell, role-aware navigation, dashboard presentation, reusable frontend styling/components, accessibility improvements, and tests directly related to those changes.
+
+This newer assignment supersedes the **2026-10-08 documentation-only housekeeping restriction** only for the specifically permitted Phase 1 UI work. The October 8 scope below remains historical context for that earlier assignment, not a prohibition on this UI task. All existing security, backend ownership, provenance, acceptance, and release boundaries remain in force.
+
+**Permitted changes:**
+- Admin layout, sidebar/header/navigation, responsive behavior, and dashboard presentation.
+- Reusable UI components, Tailwind/CSS styling, keyboard accessibility, and visual states.
+- Scoped UI tests and related documentation.
+
+**Required workflow:**
+- Keep Antigravity as the primary architecture and implementation environment; Jules is a scoped supporting implementation agent.
+- Create a separate feature branch from `staging`; open a pull request targeting `staging`.
+- Preserve role-based navigation visibility and server-side authorization independently.
+- Run the repository's existing typecheck, lint, unit-test, and build commands, reporting actual results and unverified checks.
+- Leave the PR unmerged until the owner explicitly approves it. Do not deploy Production.
+
+**Not permitted:**
+- Changes to authentication, MFA, policy acceptance, permissions, database schema/migrations, Supabase RLS/RPCs, or business actions.
+- Changes to environment selection, deployment controls, Vercel settings, GitHub Actions, dependency versions, or lockfiles.
+- New permissions, bypasses of Production capability restrictions, use of production credentials, or exposure of secrets/customer data.
+- Modifications in other FairSwap repositories or automatic merging/deployment.
+
+This authorization is for implementation and review only; it is not evidence of successful verification or release.
+
 ## Ownership and workflow
 
 Antigravity is the primary development environment. One standalone Admin uses Next.js App Router, TypeScript, Tailwind CSS and Supabase. Admin owns UI, auth/session orchestration, routes/actions, tests and application deployment configuration.
