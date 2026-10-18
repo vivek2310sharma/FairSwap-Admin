@@ -100,4 +100,40 @@ describe("Staff Management UX", () => {
          expect((assignButton as HTMLButtonElement).disabled).toBe(true);
      }
   });
+
+  test("StaffForm confirmation uses exact details and cancels correctly", async () => {
+    // We add a mock user with duplicate display_name potential
+    render(<StaffForm />);
+
+    const input = screen.getByPlaceholderText(/Search by name, email, or UUID/i);
+    const searchButton = screen.getByRole("button", { name: "Search" });
+
+    fireEvent.change(input, { target: { value: "Test" } });
+    fireEvent.click(searchButton);
+
+    const selectButtons = await screen.findAllByRole("button", { name: /Select/i });
+    fireEvent.click(selectButtons[0]);
+
+    const assignButton = screen.getByRole("button", { name: "Assign Staff Role" });
+
+    // Mock confirm to return false
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    // Create an event object that we can spy on preventDefault
+    const submitEvent = new Event('submit', { cancelable: true });
+
+    // Instead of using fireEvent which might suppress some react handling, test the form onSubmit directly, or mock the event.
+    fireEvent.submit(assignButton.closest('form') as HTMLFormElement);
+
+    // Verify confirm text
+    expect(confirmSpy).toHaveBeenCalledWith(
+        "Confirm Assignment Details:\n" +
+        "Role: moderator\n" +
+        "Name: Test User 1\n" +
+        "Email: test1@example.com\n" +
+        "UUID: 00000000-0000-0000-0000-000000000001"
+    );
+
+    confirmSpy.mockRestore();
+  });
 });

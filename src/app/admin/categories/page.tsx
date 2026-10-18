@@ -116,7 +116,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
           <h2 className="text-base font-bold text-gray-900">Current Categories</h2>
           <span className="text-xs text-gray-500 font-medium bg-white px-2.5 py-1 rounded-full border border-gray-200 shadow-sm">
-            {count || safeCategories.length} result{(count || safeCategories.length) === 1 ? "" : "s"}
+            {count === null ? "Total unavailable" : `Showing ${safeCategories.length} of ${count}`}
           </span>
         </div>
 

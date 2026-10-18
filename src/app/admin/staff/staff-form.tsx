@@ -47,7 +47,13 @@ export default function StaffForm({ isProduction = false }: { isProduction?: boo
       <form
         action={formAction}
         onSubmit={(event) => {
-          if (!selectedUser || isPending || !window.confirm(`Confirm assigning role ${selectedRole} to ${selectedUser.display_name || selectedUser.user_id}?`)) {
+          if (!selectedUser || isPending || !window.confirm(
+            `Confirm Assignment Details:\n` +
+            `Role: ${selectedRole}\n` +
+            `Name: ${selectedUser.display_name || 'Unnamed User'}\n` +
+            `Email: ${selectedUser.email || 'No Email'}\n` +
+            `UUID: ${selectedUser.user_id}`
+          )) {
             event.preventDefault();
           }
         }}

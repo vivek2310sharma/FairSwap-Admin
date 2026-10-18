@@ -24,14 +24,20 @@ export default async function AdminStaffPage() {
   const uniqueStaffIds = Array.from(new Set((staffList || []).map(s => s.user_id))).slice(0, 100);
   const staffDetailsMap = new Map<string, { display_name?: string, email?: string }>();
 
-  await Promise.all(uniqueStaffIds.map(async (id) => {
-      try {
-          const { data } = await supabase.rpc("admin_search_users", { p_query: id, p_limit: 1, p_offset: 0 });
-          if (data && data.length > 0) {
-              staffDetailsMap.set(id, { display_name: data[0].display_name, email: data[0].email });
-          }
-      } catch { /* ignore */ }
-  }));
+  // Execute RPCs in bounded chunks to avoid 100 concurrent connections
+  const chunkSize = 10;
+  for (let i = 0; i < uniqueStaffIds.length; i += chunkSize) {
+      const chunk = uniqueStaffIds.slice(i, i + chunkSize);
+      await Promise.all(chunk.map(async (id) => {
+          try {
+              const { data } = await supabase.rpc("admin_search_users", { p_query: id, p_limit: 1, p_offset: 0 });
+              // Validate user_id strictly matches the request
+              if (data && data.length > 0 && data[0].user_id === id) {
+                  staffDetailsMap.set(id, { display_name: data[0].display_name, email: data[0].email });
+              }
+          } catch { /* ignore */ }
+      }));
+  }
 
   const resolvedStaff = (staffList || []).map(staff => ({
       ...staff,
@@ -39,7 +45,9 @@ export default async function AdminStaffPage() {
       email: staffDetailsMap.get(staff.user_id)?.email
   }));
 
-  const isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+  const { readAuthConfig } = await import("@/lib/auth/runtime-config");
+  const config = readAuthConfig();
+  const isProduction = config?.environment === "production";
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -59,7 +67,14 @@ export default async function AdminStaffPage() {
 
         {/* Staff Table */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
-          <h2 className="text-lg font-bold text-gray-900">Current Staff Members</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold text-gray-900">Current Staff Members</h2>
+            {staffList && staffList.length >= 100 && (
+              <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded">
+                 Showing partial list (up to 100). Use search above for complete verification.
+              </span>
+            )}
+          </div>
           {(!resolvedStaff || resolvedStaff.length === 0) ? (
             <p className="mt-4 text-sm text-gray-500">No staff members found.</p>
           ) : (

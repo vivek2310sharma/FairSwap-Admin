@@ -32,10 +32,11 @@ const auditParamsSchema = z.object({
     return true;
 }, { message: "From Date must be before or equal to To Date", path: ["from_date"] });
 
+const SAFE_ENUMS = new Set(["active", "suspended", "deletion_pending", "deleted", "administrator", "moderator", "support_agent", "content_editor", "pending", "in_progress", "resolved", "rejected", "investigating", "dismissed", "open", "awaiting_user", "closed", "low", "normal", "high", "urgent", "create", "update", "create_city", "update_city", "create_locality", "update_locality"]);
+
 const ALLOWED_DETAIL_KEYS = new Set([
-  "reason", "expected_status", "new_status", "role",
-  "action", "name", "slug", "description", "is_active",
-  "sort_order", "city_id", "locality_id", "state"
+  "expected_status", "new_status", "role",
+  "action", "is_active", "sort_order"
 ]);
 
 function redactDetails(details: Record<string, unknown> | null | undefined): Record<string, unknown> | string {
@@ -46,9 +47,15 @@ function redactDetails(details: Record<string, unknown> | null | undefined): Rec
 
   for (const [key, value] of Object.entries(details)) {
     if (ALLOWED_DETAIL_KEYS.has(key)) {
-      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) {
+      if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
         safeDetails[key] = value;
         hasContent = true;
+      } else if (typeof value === 'string' && SAFE_ENUMS.has(value)) {
+          safeDetails[key] = value;
+          hasContent = true;
+      } else if (typeof value === 'string') {
+          safeDetails[key] = "***REDACTED***";
+          hasContent = true;
       }
     }
   }
