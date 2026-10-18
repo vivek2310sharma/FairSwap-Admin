@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { updateUserAccountStatusAction, type UserModerationResult } from "./actions";
 
 interface UserStatusFormProps {
+  isProduction?: boolean;
   targetUserId: string;
   currentStatus: string;
   isSelf: boolean;
@@ -17,6 +18,7 @@ export default function UserStatusForm({
   isSelf,
   canModerate,
   blockReason,
+  isProduction = false,
 }: UserStatusFormProps) {
   const [state, formAction, isPending] = useActionState<UserModerationResult | null, FormData>(
     updateUserAccountStatusAction,
@@ -26,6 +28,14 @@ export default function UserStatusForm({
   const defaultNextStatus = currentStatus === "suspended" ? "active" : "suspended";
   const [selectedStatus, setSelectedStatus] = useState(defaultNextStatus);
   const [reason, setReason] = useState("");
+
+  if (isProduction) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" role="alert">
+        <span className="font-semibold">Action Unavailable:</span> User status mutation is not supported in the Production environment.
+      </div>
+    );
+  }
 
   if (isSelf) {
     return (

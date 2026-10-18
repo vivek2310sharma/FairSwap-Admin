@@ -18,3 +18,25 @@ export async function loadSupportUser(client: SupabaseClient<Database>, userId: 
   return { profile: p?.success && p.data.id === userId ? p.data : null,
     accountStatus: a?.success && a.data.user_id === userId ? a.data.account_status : null };
 }
+
+export function reconcileListingCounts(
+  counts: Record<string, number | null>,
+  rlsVisibleTotal: number | null,
+  rpcTotalCount: number
+): { isFullyReconciled: boolean; otherCount: number | null } {
+  const exactCountsAvailable = Object.values(counts).every((c) => c !== null);
+  const categorySum = exactCountsAvailable
+    ? Object.values(counts).reduce((acc: number, val) => acc + (val as number), 0)
+    : null;
+
+  const isFullyReconciled =
+    exactCountsAvailable &&
+    rlsVisibleTotal !== null &&
+    rlsVisibleTotal === rpcTotalCount &&
+    categorySum !== null &&
+    categorySum <= rlsVisibleTotal;
+
+  const otherCount = isFullyReconciled ? rlsVisibleTotal! - categorySum! : null;
+
+  return { isFullyReconciled, otherCount };
+}
