@@ -191,14 +191,14 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
             <div className="block sm:hidden divide-y divide-gray-100">
               {userList.map((u) => (
                 <div key={u.user_id} className="p-4 bg-white hover:bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="font-medium text-gray-900">
+                  <div className="flex justify-between items-start mb-2 gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-gray-900 truncate">
                         {u.display_name || "Unnamed User"}
                       </div>
-                      <div className="text-sm text-gray-500 min-w-0 break-words">{u.email}</div>
+                      <div className="text-sm text-gray-500 min-w-0 break-all">{u.email}</div>
                     </div>
-                    <div>{getStatusBadge(u.account_status)}</div>
+                    <div className="shrink-0">{getStatusBadge(u.account_status)}</div>
                   </div>
                   <div className="text-xs text-gray-500 mb-3 space-y-1 min-w-0">
                     <div className="font-mono text-[10px] text-gray-400 truncate">ID: {u.user_id}</div>

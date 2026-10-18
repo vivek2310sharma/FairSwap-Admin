@@ -172,13 +172,13 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back to User Management
         </Link>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <User className="h-7 w-7 text-emerald-600" />
-              {targetUser.display_name || "User Profile"}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between min-w-0">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2 min-w-0">
+              <User className="h-7 w-7 text-emerald-600 shrink-0" />
+              <span className="truncate break-words">{targetUser.display_name || "User Profile"}</span>
             </h1>
-            <p className="mt-1 text-xs text-gray-500 font-mono">{targetUser.user_id}</p>
+            <p className="mt-1 text-xs text-gray-500 font-mono break-all">{targetUser.user_id}</p>
           </div>
           <div className="flex items-center gap-2">
             <span
@@ -209,17 +209,17 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
           <div>
             <h2 className="text-lg font-bold text-gray-900 mb-4">Account Information</h2>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
-              <div className="sm:col-span-1">
+              <div className="sm:col-span-1 min-w-0">
                 <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
                   <Mail className="h-3.5 w-3.5" /> Email Address
                 </dt>
-                <dd className="mt-1 text-sm font-semibold text-gray-900">{targetUser.email}</dd>
+                <dd className="mt-1 text-sm font-semibold text-gray-900 break-all">{targetUser.email}</dd>
               </div>
-              <div className="sm:col-span-1">
+              <div className="sm:col-span-1 min-w-0">
                 <dt className="text-xs font-medium text-gray-500 flex items-center gap-1">
                   <User className="h-3.5 w-3.5" /> Display Name
                 </dt>
-                <dd className="mt-1 text-sm font-semibold text-gray-900">
+                <dd className="mt-1 text-sm font-semibold text-gray-900 break-words">
                   {targetUser.display_name || "—"}
                 </dd>
               </div>
