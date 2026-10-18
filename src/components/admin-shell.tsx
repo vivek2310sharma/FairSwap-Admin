@@ -22,6 +22,7 @@ import {
   PanelLeftOpen,
   Shield,
   AlertTriangle,
+  UserCheck,
 } from "lucide-react";
 
 interface NavItem {
@@ -126,6 +127,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 interface AdminShellProps {
   role: StaffRole;
+  userEmail?: string;
   environmentLabel: string;
   isProduction: boolean;
   children: React.ReactNode;
@@ -133,6 +135,7 @@ interface AdminShellProps {
 
 export function AdminShell({
   role,
+  userEmail,
   environmentLabel,
   isProduction,
   children,
@@ -298,12 +301,23 @@ export function AdminShell({
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-950/50 space-y-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-400 font-medium">Session</span>
-            <span className="px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-300 font-mono font-medium border border-emerald-800/50">
-              AAL2 · {roleLabelMap[role]}
-            </span>
+        {/* Mobile Drawer Footer */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950/60 space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-full bg-slate-800 text-emerald-400 border border-slate-700">
+              <UserCheck className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold text-slate-100 truncate">
+                {userEmail || "Verified Staff Session"}
+              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-2xs px-1.5 py-0.5 rounded-md bg-emerald-950 text-emerald-300 font-medium border border-emerald-800/60">
+                  {roleLabelMap[role]}
+                </span>
+                <span className="text-2xs text-slate-400 font-mono">AAL2</span>
+              </div>
+            </div>
           </div>
           <SessionControls />
         </div>
@@ -401,11 +415,21 @@ export function AdminShell({
         <div className="p-4 border-t border-slate-800 bg-slate-950/60 space-y-3">
           {!collapsed ? (
             <>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-medium">Staff Role</span>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-300 font-mono font-medium border border-emerald-800/60">
-                  AAL2 · {roleLabelMap[role]}
-                </span>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-full bg-slate-800 text-emerald-400 border border-slate-700 shrink-0">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-semibold text-slate-100 truncate" title={userEmail}>
+                    {userEmail || "Verified Staff Session"}
+                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-2xs px-1.5 py-0.5 rounded-md bg-emerald-950 text-emerald-300 font-medium border border-emerald-800/60">
+                      {roleLabelMap[role]}
+                    </span>
+                    <span className="text-2xs text-slate-400 font-mono">AAL2</span>
+                  </div>
+                </div>
               </div>
               <div className="pt-1">
                 <SessionControls />
@@ -443,9 +467,11 @@ export function AdminShell({
               />
               {environmentLabel}
             </span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-              AAL2 · {roleLabelMap[role]}
-            </span>
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+              <span className="font-semibold">{userEmail || roleLabelMap[role]}</span>
+              <span className="text-slate-400">·</span>
+              <span className="font-mono text-emerald-700 font-semibold">AAL2</span>
+            </div>
           </div>
         </header>
 

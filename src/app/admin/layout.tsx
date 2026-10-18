@@ -11,6 +11,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <AdminShell
       role={access.role}
+      userEmail={access.email}
       environmentLabel={authConfig?.label ?? "DISABLED"}
       isProduction={authConfig?.environment === "production"}
     >

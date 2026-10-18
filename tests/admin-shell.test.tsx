@@ -19,16 +19,22 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("AdminShell navigation and accessibility", () => {
-  it("renders all navigation items for administrator role", () => {
+  it("renders all navigation items and user identity for administrator role", () => {
     mockPathname = "/admin";
     render(
-      <AdminShell role="administrator" environmentLabel="TEST" isProduction={false}>
+      <AdminShell
+        role="administrator"
+        userEmail="admin@fairswap.in"
+        environmentLabel="TEST"
+        isProduction={false}
+      >
         <div>Main Content Area</div>
       </AdminShell>
     );
 
     expect(screen.getByText("Main Content Area")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Dashboard");
+    expect(screen.getAllByText("admin@fairswap.in").length).toBeGreaterThan(0);
 
     // Check presence of groups and links
     const navElements = screen.getAllByRole("navigation", { name: "Admin areas" });
