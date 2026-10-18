@@ -26,7 +26,15 @@ export function PendingListings({ queue }: { queue: Exclude<PendingQueue, { stat
         <div><dt>Submitted (India time)</dt><dd>{date(listing.submitted_at)}</dd></div>
         <div><dt>Photos</dt><dd>{listing.listing_media.filter((photo) => photo.processing_status === "ready").length} ready / {listing.listing_media.length} submitted</dd></div>
       </dl>
-      <p><Link href={`/admin/listings/${listing.id}`} prefetch={false}>Open full review and moderation →</Link></p>
+      <div className="my-3">
+        <Link
+          href={`/admin/listings/${listing.id}`}
+          prefetch={false}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors shadow-2xs"
+        >
+          <span>Review Listing →</span>
+        </Link>
+      </div>
       <details><summary>View details and photos</summary><div className="listing-details">
         <p className="listing-description">{listing.description || "No description provided."}</p>
         <dl className="listing-summary">
