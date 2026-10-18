@@ -96,16 +96,26 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
 
   await Promise.all(
     validListingStatuses.map(async (st) => {
-      const { count } = await supabase
-        .from("listings")
-        .select("id", { count: "exact", head: true })
-        .eq("seller_id", targetUserId)
-        .eq("status", st);
-      counts[st] = count;
+      try {
+        const { count } = await supabase
+          .from("listings")
+          .select("id", { count: "exact", head: true })
+          .eq("seller_id", targetUserId)
+          .eq("status", st);
+        counts[st] = count;
+      } catch {
+        counts[st] = null;
+      }
     })
   );
 
   const exactCountsAvailable = Object.values(counts).every((c) => c !== null);
+
+  // Reconcile with total listings
+  const totalCount = targetUser.listings_count;
+  const countedSum = exactCountsAvailable ? Object.values(counts).reduce((acc: number, val) => acc + (val as number), 0) : 0;
+  const otherCount = exactCountsAvailable ? totalCount - countedSum : null;
+  const isFullyReconciled = exactCountsAvailable && otherCount !== null && otherCount >= 0;
 
   // Tab 2: Fetch reports against this user
   const { data: reports } = await supabase
@@ -220,8 +230,8 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
 
           <div className="mt-6 pt-4 border-t border-gray-100">
             <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">Listing Status Breakdown</h3>
-            {exactCountsAvailable ? (
-              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 bg-gray-50 p-3 rounded-md border border-gray-100">
+            {isFullyReconciled ? (
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5 bg-gray-50 p-3 rounded-md border border-gray-100">
                 <div className="flex flex-col">
                   <dt className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Active</dt>
                   <dd className="text-sm font-bold text-emerald-700">{counts.active}</dd>
@@ -238,7 +248,24 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                   <dt className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Rejected</dt>
                   <dd className="text-sm font-bold text-red-700">{counts.rejected}</dd>
                 </div>
+                <div className="flex flex-col border-t sm:border-t-0 sm:border-l border-gray-200 pt-2 sm:pt-0 sm:pl-3">
+                  <dt className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Other</dt>
+                  <dd className="text-sm font-bold text-gray-600">{otherCount}</dd>
+                </div>
               </dl>
+            ) : exactCountsAvailable ? (
+              <div className="rounded-md bg-gray-50 p-3 text-xs text-gray-600 border border-gray-100">
+                <p className="flex items-start gap-1.5 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <span>Four selected RLS-visible status counts are available, but full history accuracy cannot be confirmed:</span>
+                </p>
+                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 pl-5">
+                  <div className="flex items-center gap-1"><dt className="text-[10px] font-semibold">ACTIVE:</dt><dd>{counts.active}</dd></div>
+                  <div className="flex items-center gap-1"><dt className="text-[10px] font-semibold">PENDING:</dt><dd>{counts.pending_review}</dd></div>
+                  <div className="flex items-center gap-1"><dt className="text-[10px] font-semibold">SOLD:</dt><dd>{counts.sold}</dd></div>
+                  <div className="flex items-center gap-1"><dt className="text-[10px] font-semibold">REJECTED:</dt><dd>{counts.rejected}</dd></div>
+                </dl>
+              </div>
             ) : (
               <div className="rounded-md bg-gray-50 p-3 text-xs text-gray-600 border border-gray-100">
                 <p className="flex items-start gap-1.5">
@@ -324,7 +351,6 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                 name="listing_status"
                 defaultValue={listingStatusFilter || "all"}
                 className="text-xs border-gray-300 rounded-md py-1.5 pl-3 pr-8 focus:border-emerald-500 focus:ring-emerald-500"
-                onChange={(e) => e.target.form?.submit()}
               >
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
@@ -332,6 +358,12 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                 <option value="sold">Sold</option>
                 <option value="rejected">Rejected</option>
               </select>
+              <button
+                type="submit"
+                className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              >
+                Apply
+              </button>
             </form>
           </div>
 
