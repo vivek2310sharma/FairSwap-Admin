@@ -95,27 +95,74 @@ describe("AdminShell navigation and accessibility", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Listings");
   });
 
-  it("manages mobile drawer dialog semantics, focus, and Escape key dismissal", () => {
+  it("ensures closed mobile drawer is inaccessible to keyboard navigation with tabIndex=-1 and inert", () => {
     mockPathname = "/admin";
     render(
       <AdminShell role="administrator" environmentLabel="TEST" isProduction={false}>
-        <div>Mobile Shell Test</div>
+        <div>Inaccessible Test</div>
       </AdminShell>
     );
 
-    // When closed, dialog role and aria-modal are absent
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // When closed, dialog role is absent and drawer has aria-hidden and inert attributes
+    const drawerAside = document.querySelector('aside[aria-label="Mobile navigation drawer"]')!;
+    expect(drawerAside).toHaveAttribute("aria-hidden", "true");
+    expect(drawerAside).toHaveAttribute("inert");
 
-    const openButton = screen.getByRole("button", { name: "Open navigation menu" });
-    fireEvent.click(openButton);
+    // Close button and links inside mobile drawer have tabindex="-1" when closed
+    const closeBtn = screen.getByRole("button", { name: "Close navigation menu", hidden: true });
+    expect(closeBtn).toHaveAttribute("tabindex", "-1");
+  });
 
-    // When open, dialog role and aria-modal are present
+  it("manages focus movement, dialog semantics, and keyboard focus trapping when open", () => {
+    mockPathname = "/admin";
+    render(
+      <AdminShell role="administrator" environmentLabel="TEST" isProduction={false}>
+        <div>Keyboard Focus Trap Test</div>
+      </AdminShell>
+    );
+
+    const menuButton = screen.getByRole("button", { name: "Open navigation menu" });
+    menuButton.focus();
+    expect(document.activeElement).toBe(menuButton);
+
+    // Open drawer
+    fireEvent.click(menuButton);
+
+    // Modal dialog semantics are present
     const drawer = screen.getByRole("dialog", { name: "Mobile navigation drawer" });
     expect(drawer).toHaveAttribute("aria-modal", "true");
 
-    // Press Escape to dismiss
+    // Focus automatically shifts to close button inside drawer upon opening
+    const closeButton = screen.getByRole("button", { name: "Close navigation menu" });
+    expect(document.activeElement).toBe(closeButton);
+
+    // Find focusables inside drawer
+    const drawerFocusables = Array.from(
+      drawer.querySelectorAll<HTMLElement>(
+        'a[href]:not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"])'
+      )
+    );
+    expect(drawerFocusables.length).toBeGreaterThan(1);
+
+    const firstFocusable = drawerFocusables[0];
+    const lastFocusable = drawerFocusables[drawerFocusables.length - 1];
+
+    // Focus first focusable and press Shift+Tab -> wraps to last focusable
+    firstFocusable.focus();
+    expect(document.activeElement).toBe(firstFocusable);
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(lastFocusable);
+
+    // Focus last focusable and press Tab -> wraps to first focusable
+    lastFocusable.focus();
+    expect(document.activeElement).toBe(lastFocusable);
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: false });
+    expect(document.activeElement).toBe(firstFocusable);
+
+    // Press Escape key -> closes drawer and returns focus to menu toggle button
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(menuButton);
   });
 
   it("displays environment notice when in Production", () => {
