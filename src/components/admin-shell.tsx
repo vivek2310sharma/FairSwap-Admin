@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { StaffRole } from "@/lib/auth/guard";
@@ -145,13 +145,29 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
 
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const isInitialMount = useRef(true);
+
   // Close mobile drawer on route change without setState inside useEffect
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
     setMobileOpen(false);
   }
 
-  // Handle escape key to close mobile drawer
+  // Handle focus management and escape key for mobile drawer
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (mobileOpen) {
+      closeButtonRef.current?.focus();
+    } else {
+      menuButtonRef.current?.focus();
+    }
+  }, [mobileOpen]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && mobileOpen) {
@@ -199,6 +215,7 @@ export function AdminShell({
       <header className="md:hidden flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 sticky top-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setMobileOpen(true)}
             className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
@@ -240,10 +257,9 @@ export function AdminShell({
       {/* Mobile Navigation Drawer */}
       <aside
         aria-label="Mobile navigation drawer"
-        role="dialog"
-        aria-modal="true"
+        {...(mobileOpen ? { role: "dialog", "aria-modal": true } : { "aria-hidden": true })}
         className={`fixed inset-y-0 left-0 w-72 bg-slate-900 text-slate-100 z-50 transform transition-transform duration-200 ease-in-out md:hidden flex flex-col shadow-2xl ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
         }`}
       >
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
@@ -261,7 +277,9 @@ export function AdminShell({
             </div>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
+            tabIndex={mobileOpen ? 0 : -1}
             onClick={() => setMobileOpen(false)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
             aria-label="Close navigation menu"
@@ -285,6 +303,7 @@ export function AdminShell({
                       key={item.href}
                       href={item.href}
                       prefetch={false}
+                      tabIndex={mobileOpen ? 0 : -1}
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         active
                           ? "bg-emerald-600 text-white shadow-xs"

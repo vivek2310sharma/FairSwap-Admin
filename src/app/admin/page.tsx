@@ -15,7 +15,7 @@ export default async function AdminPage() {
   if (!access.allowed && access.reason === "mfa") redirect("/auth/mfa");
 
   if (access.allowed) {
-    return <AdminOverview role={access.role} />;
+    return <AdminOverview role={access.role} isProduction={config?.environment === "production"} />;
   }
 
   return (

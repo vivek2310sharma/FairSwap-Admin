@@ -20,6 +20,7 @@ interface OperationalArea {
   path: string;
   title: string;
   description: string;
+  productionDescription?: string;
   category: DomainCategory;
   icon: React.ComponentType<{ className?: string }>;
   roles: readonly StaffRole[];
@@ -30,6 +31,7 @@ const areas: OperationalArea[] = [
     path: "listings",
     title: "Moderation Queue",
     description: "Review pending listings, photographs and status history; approve, reject or remove through the existing backend.",
+    productionDescription: "Review pending listings, photographs and status history; approve or reject through the existing backend. Listing removal is unavailable in Production.",
     category: "Trust & Safety",
     icon: ShieldAlert,
     roles: ["administrator", "moderator"],
@@ -38,6 +40,7 @@ const areas: OperationalArea[] = [
     path: "users",
     title: "User Management",
     description: "Search accounts, inspect listings and reports, and manage suspensions with an audited reason.",
+    productionDescription: "Search accounts, inspect listings and reports. Account status changes (suspension/reinstatement) are unavailable in Production.",
     category: "Trust & Safety",
     icon: Users,
     roles: ["administrator", "moderator"],
@@ -62,6 +65,7 @@ const areas: OperationalArea[] = [
     path: "privacy",
     title: "Privacy Requests",
     description: "Review requests and update their status. Account deletion awaits a staff-scoped backend orchestration capability; no data-export action exists in the source screen.",
+    productionDescription: "Review privacy requests and view details. Status updates and account deletion are unavailable in Production.",
     category: "Customer Operations",
     icon: Lock,
     roles: ["administrator"],
@@ -70,6 +74,7 @@ const areas: OperationalArea[] = [
     path: "staff",
     title: "Staff Management",
     description: "Assign or revoke existing staff roles through audited backend procedures.",
+    productionDescription: "Inspect staff assignments and roles. Role assignment and revocation are unavailable in Production.",
     category: "Administration",
     icon: ShieldCheck,
     roles: ["administrator"],
@@ -114,7 +119,13 @@ const roleTitles: Record<StaffRole, string> = {
   content_editor: "Catalogue Editor Workspace",
 };
 
-export function AdminOverview({ role }: { role: StaffRole }) {
+export function AdminOverview({
+  role,
+  isProduction = false,
+}: {
+  role: StaffRole;
+  isProduction?: boolean;
+}) {
   const visibleAreas = areas.filter((area) => area.roles.includes(role));
 
   // Group visible areas by section domain
@@ -158,6 +169,7 @@ export function AdminOverview({ role }: { role: StaffRole }) {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {section.items.map((area) => {
                 const Icon = area.icon;
+                const desc = isProduction && area.productionDescription ? area.productionDescription : area.description;
                 return (
                   <article
                     key={area.path}
@@ -175,7 +187,7 @@ export function AdminOverview({ role }: { role: StaffRole }) {
                           {area.title}
                         </h4>
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          {area.description}
+                          {desc}
                         </p>
                       </div>
                     </div>

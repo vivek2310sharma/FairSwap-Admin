@@ -95,7 +95,7 @@ describe("AdminShell navigation and accessibility", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Listings");
   });
 
-  it("opens and closes mobile navigation drawer", () => {
+  it("manages mobile drawer dialog semantics, focus, and Escape key dismissal", () => {
     mockPathname = "/admin";
     render(
       <AdminShell role="administrator" environmentLabel="TEST" isProduction={false}>
@@ -103,16 +103,19 @@ describe("AdminShell navigation and accessibility", () => {
       </AdminShell>
     );
 
-    const openButton = screen.getByRole("button", { name: "Open navigation menu" });
-    expect(openButton).toBeInTheDocument();
+    // When closed, dialog role and aria-modal are absent
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
+    const openButton = screen.getByRole("button", { name: "Open navigation menu" });
     fireEvent.click(openButton);
 
+    // When open, dialog role and aria-modal are present
     const drawer = screen.getByRole("dialog", { name: "Mobile navigation drawer" });
-    expect(drawer).toBeInTheDocument();
+    expect(drawer).toHaveAttribute("aria-modal", "true");
 
-    const closeButton = screen.getByRole("button", { name: "Close navigation menu" });
-    fireEvent.click(closeButton);
+    // Press Escape to dismiss
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("displays environment notice when in Production", () => {
