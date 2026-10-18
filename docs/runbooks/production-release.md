@@ -1,10 +1,19 @@
 # Production release and operations
 
-## Current release — verified 2026-10-08
+## Current operational state — verified 2026-10-18
 
-Production https://admin.fairswap.in maps to READY dpl_G3DSMaodZwrHKSQrvfXWJiJDAiEF / fairswap-admin-2xtgq182b-fairswap.vercel.app, source 2f1f2617b1274a3b1c280ecd742fa6b7171317a3. Initial Production release was explicitly built from approved staging; main reconciliation is later housekeeping, not another application release. PR #5 integrated environment boundaries; PR #6 fixed root routing and records exact-source CI and deployment.
+This is the current configuration record; the 2026-10-08 checkpoint and older release proposal retained below are historical and must not override it.
 
-Current Test integration: https://fairswap-admin-git-staging-fairswap.vercel.app/admin, READY dpl_FRU1SCS1xyBS3PuCZzwavu7Dj552, e74b7bf406cbbe771a02b58bd652460b4c1d1852. The test-rc alias retains earlier accepted Test evidence. Neither it nor an unconfigured admin-test hostname should be described as current staging source.
+- **Source is not live release:** Phase 1 UI was merged into `staging` in PR #13 and synchronized into GitHub `main` in PR #15 (merge `33c92764efb38b5777d9cbd083a26e6070de22ff`). The resulting Vercel Production build attempt was **CANCELED** by the established ignored-build boundary (`dpl_82WV7uAgg6f4SfEepZGnChfThYSK`). At the latest verification, `https://admin.fairswap.in` still served READY deployment `dpl_6ytLHyhnbAZhnt5ShQGZChxKUtdy` (source `35fe147bd962a723902b0976e75b2d0f3c66f7b7`), not the Phase 1 main merge. No Production release is implied by these GitHub merges.
+- **Live protection mode:** Vercel project `fairswap-admin`, team on **Hobby**, reports Vercel Authentication **enabled** with `ssoProtection.deploymentType=all_except_custom_domains`; the owner-confirmed dashboard calls this **Standard Protection**. It protects preview/generated deployment URLs but **does not apply Vercel Authentication to the Production custom domain `admin.fairswap.in`**. Do not describe the current environment as All Deployments-protected. Existing application's independent staff authentication, verified identity, AAL2/TOTP, current-policy checks, role authorizations and Supabase RLS must protect Admin operations; Vercel Authentication is an optional additional gate, not a replacement.
+- **Current plan capability:** Vercel's newer **2026-09-09 announcement** states that Vercel Authentication can protect **All Deployments, including Production, free on every plan**: https://vercel.com/changelog/protect-production-deployments-for-free-on-every-plan . Earlier pricing/scope notes or older documentation suggesting a paid plan for this specific Vercel Authentication option are superseded. A separate, explicitly approved change to the project Deployment Protection dropdown could select **All Deployments**, after reviewing operator access impact. No upgrade or paid add-on should be assumed necessary for this Vercel Authentication scope.
+- **No change in this documentation task:** No Vercel settings, DNS, custom-domain assignments, Production deployments, environment variables, login settings, database permissions or release targets were changed. Before any future Production rollout, independently recheck project-level protection **including the custom domain**, the ignored-build boundary, current deployment/source and the existing acceptance/recovery gates. Treat Vercel-host protection and application-level staff authorization as distinct controls.
+
+## Earlier release checkpoint — verified 2026-10-08 (historical)
+
+At this historical checkpoint, Production https://admin.fairswap.in mapped to READY dpl_G3DSMaodZwrHKSQrvfXWJiJDAiEF / fairswap-admin-2xtgq182b-fairswap.vercel.app, source 2f1f2617b1274a3b1c280ecd742fa6b7171317a3. Initial Production release was explicitly built from approved staging; main reconciliation is later housekeeping, not another application release. PR #5 integrated environment boundaries; PR #6 fixed root routing and records exact-source CI and deployment.
+
+Test integration at that checkpoint: https://fairswap-admin-git-staging-fairswap.vercel.app/admin, READY dpl_FRU1SCS1xyBS3PuCZzwavu7Dj552, e74b7bf406cbbe771a02b58bd652460b4c1d1852. The test-rc alias retains earlier accepted Test evidence. Neither it nor an unconfigured admin-test hostname should be described as current staging source.
 
 ## Repository and build boundary
 
@@ -14,7 +23,7 @@ Vercel project prj_FGcPmQBikEg6JUCspX3hQqmfMbCj / fairswap-admin, team team_Fk8M
 if [ "$VERCEL_ENV" == "preview" ]; then exit 1; else exit 0; fi
 ```
 
-Preview builds proceed; Production builds are skipped. PR #6 records its narrow exact-commit Production exception was restored to this command. No exception is authorized for documentation/reconciliation. GitHub's existing quality workflow has no deployment/database step; repository hooks are empty. All Deployments Vercel Authentication remains enabled (ssoProtection.deploymentType=all). Protection/ruleset API detail reads return 403; do not interpret that as absent GitHub protections.
+Preview builds proceed; Production builds are skipped. PR #6 records its narrow exact-commit Production exception was restored to this command. No exception is authorized for documentation/reconciliation. GitHub's existing quality workflow has no deployment/database step; repository hooks are empty. As verified 2026-10-18, Vercel Authentication is enabled in Standard Protection mode (ssoProtection.deploymentType=all_except_custom_domains), which does not cover the Production custom domain. Earlier All Deployments statements are superseded. Protection/ruleset API detail reads can return 403; do not interpret that as absent GitHub protections.
 
 For ordinary changes: feature/fix/docs branch -> staging PR -> pinned CI and scoped Test verification -> reviewed history-preserving main PR. Recheck complete source diff, head/base and ignored-build/protection settings before merging. Main may contain later documentation while application, dependencies, build/runtime config, CI and migration assets must match the approved deployed source for this housekeeping.
 
@@ -37,6 +46,8 @@ PR #6 records real platform-authorized HTTP without a FairSwap staff session: ro
 Backups: Deferred by owner; not configured by this work.
 
 ## Historical readiness candidate — 2026-10-08
+
+**Historical-only notice (2026-10-18):** This section includes pre-launch assumptions, superseded deployment mappings and protection/pricing proposals. For current status and the free All Deployments option announced 2026-09-09, use the current operational state section above. Preserve these earlier observations as historical evidence; do not act on them without new authorization.
 
 The remaining candidate record preserves original evidence, failures and unrun checks. "Before launch", missing migrations, no Git link, proposed hostname/protection and no rollback target describe that earlier pre-launch checkpoint; they are superseded by the verified released state above. Historical gates do not authorize new backend/deployment work.
 
