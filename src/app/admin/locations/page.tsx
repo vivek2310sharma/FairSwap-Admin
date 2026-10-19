@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { pageClient } from "@/lib/admin/server";
 import { manageLocationAction } from "./actions";
-import type { Locality } from "@/types/listing";
 import { loadLocations } from "@/lib/admin/locations";
 
 export default async function AdminLocationsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
@@ -55,15 +54,15 @@ export default async function AdminLocationsPage({ searchParams }: { searchParam
           <label>City name <input name="q" defaultValue={q} maxLength={100} className="border rounded px-2 py-1" /></label>
           <button type="submit" className="border rounded px-3">Search</button>
         </form>
-        <p className="text-xs text-gray-600">Page {page}. Up to 25 localities per city are shown; this is not the complete locality catalogue.</p>
+        <p className="text-xs text-gray-600">Page {page}. Select a city to manage its complete, paginated catalog of localities.</p>
         <nav aria-label="City pages" className="flex gap-4">
           {page > 1 && <Link href={pageLink(page - 1)}>Previous cities</Link>}
           {hasMore && <Link href={pageLink(page + 1)}>Next cities</Link>}
         </nav>
         {cities.length === 0 && <p>No cities match this search.</p>}
-        {cities?.map((city) => (
+        {cities?.map((city: { id: string, name: string, slug: string, is_active: boolean, state: string, localities_count?: number }) => (
           <div key={city.id} className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-bold text-gray-900">{city.name}</h3>
@@ -81,84 +80,27 @@ export default async function AdminLocationsPage({ searchParams }: { searchParam
                 <p className="text-xs text-gray-500 mt-0.5">State: {city.state}</p>
               </div>
 
-              {/* City status toggle */}
-              <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this configuration change?">
-                <input type="hidden" name="action" value="update_city" />
-                <input type="hidden" name="city_id" value={city.id} />
-                <input type="hidden" name="is_active" value={(!city.is_active).toString()} />
-                <button
-                  type="submit"
-                  className="rounded border border-gray-300 bg-white px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/admin/locations/${city.id}`}
+                  className="rounded border border-emerald-600 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
                 >
-                  {city.is_active ? "Deactivate City" : "Activate City"}
-                </button>
-              </AdminMutationForm>
-            </div>
-
-            {/* Localities list with toggles */}
-            <div>
-              <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                Localities ({city.localities?.length || 0} shown)
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {city.localities?.map((loc: Locality) => (
-                  <div
-                    key={loc.id}
-                    className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs ${
-                      loc.is_active
-                        ? "border-gray-200 bg-gray-50 text-gray-800"
-                        : "border-gray-200 bg-gray-100 text-gray-400 line-through"
-                    }`}
+                  Manage {city.localities_count} Localities →
+                </Link>
+                {/* City status toggle */}
+                <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this configuration change?">
+                  <input type="hidden" name="action" value="update_city" />
+                  <input type="hidden" name="city_id" value={city.id} />
+                  <input type="hidden" name="is_active" value={(!city.is_active).toString()} />
+                  <button
+                    type="submit"
+                    className="rounded border border-gray-300 bg-white px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                   >
-                    <span>📍 {loc.name}</span>
-                    <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this configuration change?" className="inline">
-                      <input type="hidden" name="action" value="update_locality" />
-                      <input type="hidden" name="locality_id" value={loc.id} />
-                      <input type="hidden" name="is_active" value={(!loc.is_active).toString()} />
-                      <button
-                        type="submit"
-                        title={loc.is_active ? "Deactivate locality" : "Activate locality"}
-                        className="ml-1 text-[10px] text-gray-500 hover:text-gray-900 font-bold"
-                      >
-                        {loc.is_active ? "✕" : "✓"}
-                      </button>
-                    </AdminMutationForm>
-                  </div>
-                ))}
+                    {city.is_active ? "Deactivate City" : "Activate City"}
+                  </button>
+                </AdminMutationForm>
               </div>
             </div>
-
-            {/* Add locality to this city */}
-            <details className="pt-2 text-xs">
-              <summary className="cursor-pointer font-semibold text-emerald-600 hover:text-emerald-700">
-                + Add Locality to {city.name}
-              </summary>
-              <AdminMutationForm mutation={manageLocationAction} confirm="Confirm this configuration change?" className="mt-3 flex flex-wrap items-center gap-2">
-                <input type="hidden" name="action" value="create_locality" />
-                <input type="hidden" name="city_id" value={city.id} />
-                <input type="hidden" name="is_active" value="true" />
-                <input
-                  name="name"
-                  type="text"
-                  required
-                  placeholder="Locality name (e.g. Civil Lines)"
-                  className="rounded border border-gray-300 px-2.5 py-1 text-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-                <input
-                  name="slug"
-                  type="text"
-                  required
-                  placeholder="slug (e.g. civil-lines)"
-                  className="rounded border border-gray-300 px-2.5 py-1 text-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-                <button
-                  type="submit"
-                  className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
-                >
-                  Add Locality
-                </button>
-              </AdminMutationForm>
-            </details>
           </div>
         ))}
       </div>
