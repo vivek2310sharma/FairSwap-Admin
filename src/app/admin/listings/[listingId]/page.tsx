@@ -4,6 +4,7 @@ import { pageClient } from "@/lib/admin/server";
 import { ListingPhoto } from "@/components/listing-photo";
 import ModerationActions from "./ModerationActions";
 import { z } from "zod";
+import {moderationReviewAvailability} from "@/lib/listings/moderation-review-availability";
 
 export default async function AdminListingDetailPage({
   params,
@@ -66,7 +67,7 @@ export default async function AdminListingDetailPage({
       rejection_reason,
       removal_reason,
       removed_by,
-      categories(name, slug),
+      categories(name, slug, macro_category),
       cities(name, state),
       localities(name)
     `)
@@ -127,6 +128,8 @@ export default async function AdminListingDetailPage({
     .eq("listing_id", id)
     .order("created_at", { ascending: true });
 
+  const reviewAvailability = moderationReviewAvailability(moderationListing.categories);
+  const familyReviewBlocked = reviewAvailability.status !== "supported";
   const isSelfListing = moderationListing.seller_id === user.id;
   const allMediaReady =
     (media && media.length > 0 && media.every((m) => m.processing_status === "ready")) || false;
@@ -165,7 +168,8 @@ export default async function AdminListingDetailPage({
       <ModerationActions
         listingId={moderationListing.id}
         isSelfListing={isSelfListing}
-        canApprove={allMediaReady && moderationListing.status === "pending_review"}
+        canApprove={allMediaReady && moderationListing.status === "pending_review" && !familyReviewBlocked}
+        familyReviewBlocked={familyReviewBlocked}
         revision={moderationListing.revision} status={moderationListing.status}
       />
 

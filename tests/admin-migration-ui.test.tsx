@@ -39,6 +39,12 @@ describe("migrated forms and navigation", () => {
     render(<ModerationActions listingId={id} isSelfListing={false} canApprove={false} revision={2} status="active" />);
     expect(screen.getByRole("button",{ name:/Reject with Reason/ })).toBeDisabled(); expect(screen.getByRole("button",{ name:/Remove Listing/ })).toBeEnabled();
   });
+  it("does not expose approval or rejection actions for an unreleased family",()=>{
+    render(<ModerationActions listingId={id} isSelfListing={false} canApprove={false} familyReviewBlocked revision={2} status="pending_review" />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Vehicle and Property reviews are not released");
+    expect(screen.queryByRole("button",{name:/Approve Listing|Reject with Reason/})).not.toBeInTheDocument();
+    expect(calls.decision).not.toHaveBeenCalled();
+  });
   it("does not show report success for an empty or rejected result", async () => {
     calls.report.mockRejectedValue(new Error("SECRET_SENTINEL"));
     render(<ReportResolutionForm reportId={id} currentStatus="pending" />);
