@@ -9,6 +9,7 @@ interface ModerationActionsProps {
   isSelfListing: boolean;
   canApprove: boolean;
   familyReviewBlocked?: boolean;
+  reviewFingerprint?: string;
   revision: number;
   status: string;
 }
@@ -16,7 +17,7 @@ interface ModerationActionsProps {
 export default function ModerationActions({
   listingId,
   isSelfListing,
-  canApprove, familyReviewBlocked=false, revision, status,
+  canApprove, familyReviewBlocked=false, reviewFingerprint, revision, status,
 }: ModerationActionsProps) {
   const router = useRouter();
   const busy = useRef(false);
@@ -31,7 +32,9 @@ export default function ModerationActions({
     setError(null);
     setIsSubmitting(true);
     try {
-      const res = await moderateListingAction(listingId, "approve", undefined, revision, status);
+      const res = reviewFingerprint
+        ? await moderateListingAction(listingId, "approve", undefined, revision, status, reviewFingerprint)
+        : await moderateListingAction(listingId, "approve", undefined, revision, status);
       if (res.success !== true) {
         setError(res.error || "Operation not confirmed. Refresh before retrying.");
       } else {
@@ -55,7 +58,9 @@ export default function ModerationActions({
     setError(null);
     setIsSubmitting(true);
     try {
-      const res = await moderateListingAction(listingId, actionType, reason.trim(), revision, status);
+      const res = reviewFingerprint
+        ? await moderateListingAction(listingId, actionType, reason.trim(), revision, status, reviewFingerprint)
+        : await moderateListingAction(listingId, actionType, reason.trim(), revision, status);
       if (res.success !== true) {
         setError(res.error || "Operation not confirmed. Refresh before retrying.");
       } else {

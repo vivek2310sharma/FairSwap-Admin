@@ -5,6 +5,7 @@ import { ListingPhoto } from "@/components/listing-photo";
 import ModerationActions from "./ModerationActions";
 import { z } from "zod";
 import {moderationReviewAvailability} from "@/lib/listings/moderation-review-availability";
+import {loadStaffFamilyReviewPacket} from "@/lib/listings/family-review-server";
 
 export default async function AdminListingDetailPage({
   params,
@@ -129,7 +130,15 @@ export default async function AdminListingDetailPage({
     .order("created_at", { ascending: true });
 
   const reviewAvailability = moderationReviewAvailability(moderationListing.categories);
-  const familyReviewBlocked = reviewAvailability.status !== "supported";
+  const familyPacket = reviewAvailability.status === "not_released"
+    ? await loadStaffFamilyReviewPacket(supabase, id)
+    : null;
+  const verifiedPacket = familyPacket && familyPacket.identity.revision === moderationListing.revision
+    && familyPacket.identity.status === moderationListing.status
+    && familyPacket.category_id === moderationListing.category_id
+    ? familyPacket : null;
+  const familyReviewBlocked = reviewAvailability.status === "unverified"
+    || (reviewAvailability.status === "not_released" && !verifiedPacket);
   const isSelfListing = moderationListing.seller_id === user.id;
   const allMediaReady =
     (media && media.length > 0 && media.every((m) => m.processing_status === "ready")) || false;
@@ -170,9 +179,23 @@ export default async function AdminListingDetailPage({
         isSelfListing={isSelfListing}
         canApprove={allMediaReady && moderationListing.status === "pending_review" && !familyReviewBlocked}
         familyReviewBlocked={familyReviewBlocked}
+        reviewFingerprint={verifiedPacket?.fingerprint}
         revision={moderationListing.revision} status={moderationListing.status}
       />
 
+      {verifiedPacket && (
+        <section className="rounded-lg border border-emerald-200 bg-white p-5 space-y-3" aria-label="Family review evidence">
+          <h2 className="font-semibold text-foreground">Verified {verifiedPacket.family === "property" ? "Property rental" : "Vehicle"} review packet</h2>
+          <p className="text-xs text-muted-foreground">Review the complete saved declarations, financial terms and every photograph before deciding. Any intervening changes invalidate this review.</p>
+          <dl className="text-sm space-y-2">
+            <div><dt className="font-medium">Listing revision</dt><dd>{verifiedPacket.identity.revision}</dd></div>
+            <div><dt className="font-medium">Family</dt><dd>{verifiedPacket.family}</dd></div>
+            <div><dt className="font-medium">Listing details</dt><dd className="whitespace-pre-wrap break-words">{JSON.stringify(verifiedPacket.attributes,null,2)}</dd></div>
+            <div><dt className="font-medium">Vehicle model or rental terms</dt><dd className="whitespace-pre-wrap break-words">{JSON.stringify(verifiedPacket.details,null,2)}</dd></div>
+            <div><dt className="font-medium">Submitted photos</dt><dd>{verifiedPacket.media.length} ({verifiedPacket.media.filter(p=>p.status === "ready").length} ready)</dd></div>
+          </dl>
+        </section>
+      )}
       {/* Grid of details */}
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
         {/* Left column: main details & photos */}

@@ -6,13 +6,14 @@ import { sameOriginMutation } from "@/lib/auth/inputs";
 import { requestClient } from "@/lib/supabase/server";
 import type { AdminClient } from "@/lib/supabase/client";
 import {moderationReviewAvailability} from "@/lib/listings/moderation-review-availability";
+import {loadStaffFamilyReviewPacket,isFamilyReviewEnabled} from "@/lib/listings/family-review-server";
 
 const id = z.string().uuid();
 const text = z.string().trim().min(1).max(3000);
 const optionalText = z.string().trim().max(3000).nullable().optional();
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100);
 const schema = z.discriminatedUnion("operation", [
-  z.object({ operation: z.literal("moderate"), listingId: id, action: z.enum(["approve", "reject", "remove"]), reason: optionalText, revision: z.number().int().positive(), status: z.string().max(30) }).strict(),
+  z.object({ operation: z.literal("moderate"), listingId: id, action: z.enum(["approve", "reject", "remove"]), reason: optionalText, revision: z.number().int().positive(), status: z.string().max(30), reviewFingerprint: z.string().regex(/^[0-9a-f]{64}$/).optional() }).strict(),
   z.object({ operation: z.literal("user-status"), targetUserId: id, newStatus: z.enum(["active", "suspended"]), reason: z.string().trim().min(10).max(500), expectedStatus: z.string().max(30) }).strict(),
   z.object({ operation: z.literal("assign-role"), targetUserId: id, role: z.enum(["administrator", "moderator", "support_agent", "content_editor"]) }).strict(),
   z.object({ operation: z.literal("revoke-role"), targetUserId: id }).strict(),
@@ -59,15 +60,18 @@ export async function adminMutation(input: unknown, origin: string | null, host:
         // New family drafts are not released for reviewer decisions; the
         // reviewed family packet and backend approval gate must ship together.
         // Keep emergency removals on the existing separately authorized path.
-        if (value.action !== "remove") {
-          const availability = moderationReviewAvailability(row.data.categories);
-          if (availability.status !== "supported") return {
-            error: availability.status === "not_released"
-              ? "Vehicle and Property moderation is not yet released. Do not approve or reject this listing."
-              : "Listing category could not be verified for moderation. Refresh before deciding.",
-          };
+        const availability = moderationReviewAvailability(row.data.categories);
+        if (availability.status === "unverified") return {error:"Listing category could not be verified for moderation. Refresh before deciding."};
+        if (availability.status === "not_released") {
+          if (!isFamilyReviewEnabled() || !value.reviewFingerprint) return {error:"Vehicle and Property moderation is not yet released. Do not approve or reject this listing."};
+          const packet = await loadStaffFamilyReviewPacket(client, value.listingId);
+          if(!packet || packet.identity.revision!==value.revision || packet.identity.status!==value.status || packet.fingerprint!==value.reviewFingerprint) return {error:"Family review evidence changed or is unavailable. Refresh and review the complete listing."};
+          // The backend repeats fingerprint/owner/AAL2/media checks inside a row lock.
+          rpc = "moderate_family_reviewed";
+          args = {listing_id:value.listingId,action:value.action,reason:value.reason||null,expected_revision:value.revision,expected_fingerprint:value.reviewFingerprint};
+          break;
         }
-        // Feedback precheck only; the approved RPC repeats revision/status validation under the listing lock.
+        // Goods retains its existing independently reviewed RPC.
         rpc = "moderate_listing_reviewed"; args = { listing_id: value.listingId, action: value.action, reason: value.reason || null, expected_revision: value.revision, expected_status: value.status }; break;
       }
       case "user-status": {
