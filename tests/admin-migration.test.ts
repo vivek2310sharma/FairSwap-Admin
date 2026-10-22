@@ -24,7 +24,7 @@ function fixture() {
   const rows: Record<string, { data: unknown; error: unknown }> = {
     user_accounts: { data: { account_status: "active" }, error: null },
     staff_roles: { data: { role: "administrator" }, error: null },
-    listings: { data: { id: target, seller_id: target, revision: 2, status: "pending_review" }, error: null },
+    listings: { data: { id: target, seller_id: target, revision: 2, status: "pending_review", categories: {macro_category: "goods"} }, error: null },
     categories: { data: [], error: null },
   };
   const builder = (table: string) => {
@@ -122,6 +122,19 @@ describe("migrated RPC integrations", () => {
     f.claims.iss = `${TEST_SUPABASE_URL}/auth/v1`;
     f.client.rpc.mockResolvedValue({ data: false,error:null });
     expect((await adminMutation(moderate,origin,host,factory)).error).toBeDefined(); expect(f.client.rpc).toHaveBeenCalledTimes(1);
+  });
+  it.each(["vehicles","property"])("denies unreleased %s reviewer actions before any backend moderation RPC",async family=>{
+    f.rows.listings.data={id:target,seller_id:target,revision:2,status:"pending_review",categories:{macro_category:family}};
+    const approved=await adminMutation(moderate,origin,host,factory);
+    const rejected=await adminMutation({...moderate,action:"reject",reason:"Synthetic review reason"},origin,host,factory);
+    expect(approved.error).toContain("not yet released");
+    expect(rejected.error).toContain("not yet released");
+    expect(f.client.rpc.mock.calls.filter(([name])=>name==="moderate_listing_reviewed")).toHaveLength(0);
+  });
+  it("fails closed if category relation cannot be verified",async()=>{
+    f.rows.listings.data={id:target,seller_id:target,revision:2,status:"pending_review",categories:null};
+    expect((await adminMutation(moderate,origin,host,factory)).error).toContain("category could not be verified");
+    expect(f.client.rpc.mock.calls.some(([name])=>name==="moderate_listing_reviewed")).toBe(false);
   });
   it("rejects self moderation, missing reasons and changed revisions", async () => {
     expect((await adminMutation({ ...moderate, action: "reject" },origin,host,factory)).error).toBeDefined();
