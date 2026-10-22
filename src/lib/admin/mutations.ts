@@ -5,6 +5,7 @@ import { staffAccess, type StaffRole } from "@/lib/auth/guard";
 import { sameOriginMutation } from "@/lib/auth/inputs";
 import { requestClient } from "@/lib/supabase/server";
 import type { AdminClient } from "@/lib/supabase/client";
+import {moderationReviewAvailability} from "@/lib/listings/moderation-review-availability";
 
 const id = z.string().uuid();
 const text = z.string().trim().min(1).max(3000);
@@ -52,9 +53,20 @@ export async function adminMutation(input: unknown, origin: string | null, host:
     let args: Record<string, unknown>;
     switch (value.operation) {
       case "moderate": {
-        const row = await client.from("listings").select("id,seller_id,status,revision").eq("id", value.listingId).maybeSingle();
+        const row = await client.from("listings").select("id,seller_id,status,revision,categories(macro_category)").eq("id", value.listingId).maybeSingle();
         if (row.error || !row.data || row.data.seller_id === access.userId) return failed;
         if (row.data.revision !== value.revision || row.data.status !== value.status) return { error: "The listing changed. Refresh and review it again." };
+        // New family drafts are not released for reviewer decisions; the
+        // reviewed family packet and backend approval gate must ship together.
+        // Keep emergency removals on the existing separately authorized path.
+        if (value.action !== "remove") {
+          const availability = moderationReviewAvailability(row.data.categories);
+          if (availability.status !== "supported") return {
+            error: availability.status === "not_released"
+              ? "Vehicle and Property moderation is not yet released. Do not approve or reject this listing."
+              : "Listing category could not be verified for moderation. Refresh before deciding.",
+          };
+        }
         // Feedback precheck only; the approved RPC repeats revision/status validation under the listing lock.
         rpc = "moderate_listing_reviewed"; args = { listing_id: value.listingId, action: value.action, reason: value.reason || null, expected_revision: value.revision, expected_status: value.status }; break;
       }
