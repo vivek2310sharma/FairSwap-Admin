@@ -8,6 +8,7 @@ interface ModerationActionsProps {
   listingId: string;
   isSelfListing: boolean;
   canApprove: boolean;
+  familyReviewBlocked?: boolean;
   revision: number;
   status: string;
 }
@@ -15,7 +16,7 @@ interface ModerationActionsProps {
 export default function ModerationActions({
   listingId,
   isSelfListing,
-  canApprove, revision, status,
+  canApprove, familyReviewBlocked=false, revision, status,
 }: ModerationActionsProps) {
   const router = useRouter();
   const busy = useRef(false);
@@ -67,6 +68,7 @@ export default function ModerationActions({
   };
 
   if (!["pending_review","active","reserved","paused"].includes(status)) return <p>This listing has no available moderation transition.</p>;
+  if (status === "pending_review" && familyReviewBlocked) return <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Vehicle and Property reviews are not released. Approval and rejection remain disabled until category-specific evidence and backend validation are available.</p>;
   if (isSelfListing) {
     return (
       <div className="rounded-md bg-amber-50 p-4 border border-amber-200 text-xs text-amber-800">
