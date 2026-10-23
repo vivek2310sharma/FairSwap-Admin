@@ -18,7 +18,7 @@ const schema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("privacy-status"), requestId: id, newStatus: z.enum(["pending", "in_progress", "resolved", "rejected"]), notes: optionalText }).strict(),
   z.object({ operation: z.literal("resolve-report"), reportId: id, newStatus: z.enum(["investigating", "resolved", "dismissed"]), notes: optionalText }).strict(),
   z.object({ operation: z.literal("support-reply"), ticketId: id, content: text, internal: z.boolean() }).strict(),
-  z.object({ operation: z.literal("ticket-status"), ticketId: id, status: z.enum(["open", "in_progress", "awaiting_user", "resolved", "closed"]), priority: z.enum(["low", "normal", "high", "urgent"]), assignedTo: id.nullable() }).strict(),
+  z.object({ operation: z.literal("ticket-status"), ticketId: id, status: z.enum(["open", "in_progress", "awaiting_user", "resolved", "closed"]), priority: z.enum(["low", "normal", "high", "urgent"]) }).strict(),
   z.object({ operation: z.literal("category"), action: z.enum(["create", "update"]), categoryId: id.nullable(), slug: slug.nullable(), name: z.string().trim().min(1).max(150).nullable(), description: optionalText, icon: z.string().max(100).nullable(), sortOrder: z.number().int().min(0).max(100000).nullable(), active: z.boolean() }).strict(),
   z.object({ operation: z.literal("location"), action: z.enum(["create_city", "update_city", "create_locality", "update_locality"]), cityId: id.nullable(), localityId: id.nullable(), name: z.string().trim().min(1).max(150).nullable(), state: z.string().trim().min(1).max(150).nullable(), slug: slug.nullable(), active: z.boolean() }).strict(),
 ]);
@@ -71,7 +71,8 @@ export async function adminMutation(input: unknown, origin: string | null, host:
       case "privacy-status": rpc = "admin_resolve_privacy_request"; args = { p_request_id: value.requestId, p_new_status: value.newStatus, p_notes: value.notes || null }; break;
       case "resolve-report": rpc = "admin_resolve_report"; args = { report_id: value.reportId, new_status: value.newStatus, resolution_notes: value.notes || null }; break;
       case "support-reply": rpc = value.internal ? "admin_add_ticket_internal_note" : "admin_reply_support_ticket"; args = { ticket_id: value.ticketId, content: value.content }; break;
-      case "ticket-status": rpc = "admin_update_ticket_status"; args = { ticket_id: value.ticketId, status: value.status, priority: value.priority, assigned_to: value.assignedTo }; break;
+      // State-only RPC: it never reads or writes assigned_to, so a concurrent assignment is preserved by the database. No pre-read, no replay.
+      case "ticket-status": rpc = "admin_update_ticket_state"; args = { ticket_id: value.ticketId, status: value.status, priority: value.priority }; break;
       case "category": rpc = "admin_manage_category"; args = { action: value.action, category_id: value.categoryId, slug: value.slug, name: value.name, description: value.description || null, icon: value.icon, sort_order: value.sortOrder, is_active: value.active }; break;
       case "location": rpc = "admin_manage_location"; args = { action: value.action, city_id: value.cityId, locality_id: value.localityId, name: value.name, state: value.state, slug: value.slug, is_active: value.active }; break;
     }
