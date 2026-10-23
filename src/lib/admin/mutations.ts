@@ -71,16 +71,8 @@ export async function adminMutation(input: unknown, origin: string | null, host:
       case "privacy-status": rpc = "admin_resolve_privacy_request"; args = { p_request_id: value.requestId, p_new_status: value.newStatus, p_notes: value.notes || null }; break;
       case "resolve-report": rpc = "admin_resolve_report"; args = { report_id: value.reportId, new_status: value.newStatus, resolution_notes: value.notes || null }; break;
       case "support-reply": rpc = value.internal ? "admin_add_ticket_internal_note" : "admin_reply_support_ticket"; args = { ticket_id: value.ticketId, content: value.content }; break;
-      case "ticket-status": {
-        // admin_update_ticket_status always writes assigned_to, so the server carries the stored assignee forward; a client value is never accepted.
-        // Interim and NOT atomic: an assignment made by someone else between this read and the RPC is overwritten with the stale value, and neither prevented nor detected here.
-        // The permanent fix is a Backend RPC that does not write assigned_to.
-        const row = await client.from("support_tickets").select("id,assigned_to").eq("id", value.ticketId).maybeSingle();
-        if (row.error || row.data?.id !== value.ticketId) return failed;
-        const current = row.data.assigned_to;
-        if (current !== null && !id.safeParse(current).success) return failed;
-        rpc = "admin_update_ticket_status"; args = { ticket_id: value.ticketId, status: value.status, priority: value.priority, assigned_to: current }; break;
-      }
+      // State-only RPC: it never reads or writes assigned_to, so a concurrent assignment is preserved by the database. No pre-read, no replay.
+      case "ticket-status": rpc = "admin_update_ticket_state"; args = { ticket_id: value.ticketId, status: value.status, priority: value.priority }; break;
       case "category": rpc = "admin_manage_category"; args = { action: value.action, category_id: value.categoryId, slug: value.slug, name: value.name, description: value.description || null, icon: value.icon, sort_order: value.sortOrder, is_active: value.active }; break;
       case "location": rpc = "admin_manage_location"; args = { action: value.action, city_id: value.cityId, locality_id: value.localityId, name: value.name, state: value.state, slug: value.slug, is_active: value.active }; break;
     }
