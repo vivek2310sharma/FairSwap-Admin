@@ -3,10 +3,25 @@ import Link from "next/link";
 import { pageClient } from "@/lib/admin/server";
 import { LifeBuoy, Clock, CheckCircle2, AlertCircle, Eye } from "lucide-react";
 import type { Metadata } from "next";
+import {
+  describeTicketCustomer,
+  formatSupportTicketReference,
+} from "@/lib/admin/support-ticket-display";
 
 export const metadata: Metadata = {
   title: "Support Tickets — FairSwap Admin",
   description: "Customer service inquiries and appeals management queue.",
+};
+
+type TicketRow = {
+  id: string;
+  user_id: string | null;
+  category: string;
+  subject: string;
+  status: string;
+  priority: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export default async function AdminSupportPage({
@@ -34,39 +49,44 @@ export default async function AdminSupportPage({
     redirect("/admin");
   }
 
-  let query = supabase
-    .from("support_tickets")
-    .select(`
-      id,
-      ticket_number,
-      user_id,
-      category,
-      subject,
-      status,
-      priority,
-      created_at,
-      updated_at
-    `)
-    .order("updated_at", { ascending: false })
-    .limit(100);
+  // Only columns that exist on public.support_tickets. A failed read is shown as a failure, never
+  // as an empty queue (pageClient throws on query errors; a returned error is handled as well).
+  let tickets: TicketRow[] | null = null;
+  try {
+    let query = supabase
+      .from("support_tickets")
+      .select("id, user_id, category, subject, status, priority, created_at, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(100);
 
-  if (status && status !== "all") {
-    query = query.eq("status", status);
+    if (status && status !== "all") {
+      query = query.eq("status", status);
+    }
+
+    const { data, error } = await query;
+    tickets = error || !data ? null : (data as TicketRow[]);
+  } catch {
+    tickets = null;
   }
+  const queueFailed = tickets === null;
 
-  const { data: tickets } = await query;
-
-  // Fetch profiles for users in tickets
-  const userIds = Array.from(new Set((tickets || []).map((t) => t.user_id).filter((id): id is string => id !== null)));
+  // Customer names are a convenience: if they cannot be read the queue still works.
   const profilesMap: Record<string, { display_name: string }> = {};
+  const userIds = Array.from(
+    new Set((tickets ?? []).map((t) => t.user_id).filter((id): id is string => id !== null))
+  );
   if (userIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, display_name")
-      .in("id", userIds);
-    (profiles || []).forEach((p) => {
-      profilesMap[p.id] = p;
-    });
+    try {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", userIds);
+      (profiles || []).forEach((p) => {
+        profilesMap[p.id] = p;
+      });
+    } catch {
+      // Falls back to "Customer unavailable" per row.
+    }
   }
 
   const getStatusBadge = (st: string) => {
@@ -178,11 +198,19 @@ export default async function AdminSupportPage({
 
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        {tickets && tickets.length > 0 ? (
+        {queueFailed ? (
+          <div role="alert" className="p-12 text-center text-gray-700">
+            <AlertCircle className="mx-auto h-12 w-12 text-rose-400" />
+            <p className="mt-4 font-semibold text-gray-900">The support queue could not be loaded</p>
+            <p className="text-sm">
+              This is a read failure, not an empty queue. Refresh the page or contact the backend owner.
+            </p>
+          </div>
+        ) : tickets && tickets.length > 0 ? (
           <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
             <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
               <tr>
-                <th className="px-6 py-3"># Ticket</th>
+                <th className="px-6 py-3">Reference</th>
                 <th className="px-6 py-3">User</th>
                 <th className="px-6 py-3">Subject / Category</th>
                 <th className="px-6 py-3">Priority</th>
@@ -193,16 +221,17 @@ export default async function AdminSupportPage({
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {tickets.map((t) => {
-                const userObj = t.user_id ? profilesMap[t.user_id] : null;
+                const customer = describeTicketCustomer(
+                  t.user_id,
+                  t.user_id ? profilesMap[t.user_id]?.display_name : null
+                );
                 return (
                   <tr key={t.id} className="hover:bg-gray-50">
                     <td className="whitespace-nowrap px-6 py-4 font-mono text-xs font-bold text-emerald-700">
-                      #{t.ticket_number}
+                      #{formatSupportTicketReference(t.id)}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-xs text-gray-600">
-                      <div className="font-semibold text-gray-900">
-                        {userObj?.display_name || "Deleted User"}
-                      </div>
+                      <div className="font-semibold text-gray-900">{customer}</div>
                       <div className="font-mono text-gray-400">{t.user_id ? `${t.user_id.slice(0, 8)}...` : "Deleted user"}</div>
                     </td>
                     <td className="px-6 py-4">
