@@ -26,6 +26,7 @@ function fixture() {
     staff_roles: { data: { role: "administrator" }, error: null },
     listings: { data: { id: target, seller_id: target, revision: 2, status: "pending_review" }, error: null },
     categories: { data: [], error: null },
+    support_tickets: { data: { id: target, assigned_to: null }, error: null },
   };
   const builder = (table: string) => {
     const chain = { select: vi.fn(() => chain), eq: vi.fn(() => chain), order: vi.fn(() => chain), limit: vi.fn(() => chain),
@@ -39,6 +40,7 @@ function fixture() {
       if (name === "admin_search_users") return { data: [{ user_id: target, role: null, account_status: "active" }], error: null };
       if (name === "moderate_listing_reviewed") { rows.listings.data = { id: target, status: args?.action === "reject" ? "rejected" : args?.action === "remove" ? "removed" : "active" }; return { data: { success: true }, error: null }; }
       if (["admin_manage_category", "admin_manage_location"].includes(name)) return { data: { success: true }, error: null };
+      if (name === "admin_update_ticket_status") { rows.support_tickets.data = { id: target, assigned_to: args?.assigned_to ?? null }; return { data: null, error: null }; }
       if (["admin_reply_support_ticket", "admin_add_ticket_internal_note"].includes(name)) return { data: target, error: null };
       return { data: null, error: null };
     }),
@@ -68,7 +70,7 @@ const cases = [
   [{ operation: "resolve-report", reportId: target, newStatus: "dismissed", notes: "Synthetic finding" }, "admin_resolve_report"],
   [{ operation: "support-reply", ticketId: target, content: "Synthetic reply", internal: false }, "admin_reply_support_ticket"],
   [{ operation: "support-reply", ticketId: target, content: "Synthetic internal note", internal: true }, "admin_add_ticket_internal_note"],
-  [{ operation: "ticket-status", ticketId: target, status: "resolved", priority: "normal", assignedTo: null }, "admin_update_ticket_status"],
+  [{ operation: "ticket-status", ticketId: target, status: "resolved", priority: "normal" }, "admin_update_ticket_status"],
   [{ operation: "category", action: "create", categoryId: null, name: "Synthetic category", slug: "synthetic-category", description: null, icon: null, sortOrder: 0, active: true }, "admin_manage_category"],
   [{ operation: "location", action: "create_city", cityId: null, localityId: null, name: "Synthetic city", state: "Synthetic state", slug: "synthetic-city", active: true }, "admin_manage_location"],
   [{ operation: "user-status", targetUserId: target, newStatus: "active", expectedStatus: "suspended", reason: "Synthetic restoration reason" }, "admin_update_user_account_status"],
@@ -165,6 +167,68 @@ describe("migrated RPC integrations", () => {
       expect((await adminMutation(input,origin,host,factory)).error).toBeDefined();
     }
     expect(f.client.rpc.mock.calls.some(([name]) => name === "admin_update_user_account_status")).toBe(false);
+  });
+});
+
+describe("support ticket assignee preservation", () => {
+  const input = { operation: "ticket-status", ticketId: target, status: "in_progress", priority: "high" };
+  const calls = () => f.client.rpc.mock.calls.filter(([name]) => name === "admin_update_ticket_status");
+  it.each([[null], [target]])("carries the stored assignee %s into the RPC and keeps it", async assigned => {
+    f.rows.support_tickets.data = { id: target, assigned_to: assigned };
+    expect(await adminMutation(input,origin,host,factory)).toMatchObject({ success: true });
+    expect(calls()).toEqual([["admin_update_ticket_status",{ ticket_id:target,status:"in_progress",priority:"high",assigned_to:assigned }]]);
+    expect(f.rows.support_tickets.data).toEqual({ id: target, assigned_to: assigned });
+  });
+  it("rejects a client-supplied assignee and never forwards it", async () => {
+    expect((await adminMutation({ ...input, assignedTo: actor },origin,host,factory)).error).toBeDefined();
+    expect(calls()).toHaveLength(0);
+  });
+  it.each([
+    ["missing ticket", { data: null, error: null }],
+    ["mismatched ticket", { data: { id: actor, assigned_to: null }, error: null }],
+    ["read failure", { data: null, error: { message: "SECRET_SENTINEL" } }],
+    ["malformed assignee", { data: { id: target, assigned_to: "not-a-uuid" }, error: null }],
+  ])("fails closed before writing on %s", async (_name, row) => {
+    f.rows.support_tickets = row;
+    const result = await adminMutation(input,origin,host,factory);
+    expect(result.success).not.toBe(true); expect(JSON.stringify(result)).not.toContain("SECRET_SENTINEL");
+    expect(calls()).toHaveLength(0);
+  });
+  it("documents the stale-write race the existing RPC cannot prevent", async () => {
+    const agentA = actor, agentB = "33333333-3333-4333-8333-333333333333";
+    f.rows.support_tickets.data = { id: target, assigned_to: agentA };
+    const original = f.client.rpc.getMockImplementation()!;
+    f.client.rpc.mockImplementation(async (name, args) => {
+      // Another staff member assigns B after our pre-read; the existing RPC then writes the stale argument unconditionally.
+      if (name === "admin_update_ticket_status") f.rows.support_tickets.data = { id: target, assigned_to: agentB };
+      return original(name, args);
+    });
+    const result = await adminMutation(input,origin,host,factory);
+    expect(calls()).toEqual([["admin_update_ticket_status",expect.objectContaining({ assigned_to: agentA })]]);
+    // B's assignment is lost and the Admin cannot know: this limitation is accepted until the Backend provides an RPC that leaves assigned_to alone.
+    expect(f.rows.support_tickets.data).toEqual({ id: target, assigned_to: agentA });
+    expect(result).toEqual({ success: true, message: "Backend operation completed." });
+    expect(calls()).toHaveLength(1);
+  });
+  it("does not retry or claim success when the RPC fails or its response is lost", async () => {
+    for (const outcome of [async () => ({ data: null, error: { message: "SECRET_SENTINEL" } }), async () => { throw new Error("SECRET_SENTINEL"); }]) {
+      f.client.rpc.mockClear();
+      f.client.rpc.mockImplementation(async name => name === "has_current_policy_acceptance" ? { data: true, error: null } : outcome());
+      const result = await adminMutation(input,origin,host,factory);
+      expect(result.success).not.toBe(true); expect(JSON.stringify(result)).not.toContain("SECRET_SENTINEL");
+      expect(calls()).toHaveLength(1);
+    }
+  });
+  it.each(["administrator", "support_agent"])("still permits %s and denies other roles and AAL1 before any read", async role => {
+    f.rows.staff_roles.data = { role }; expect((await adminMutation(input,origin,host,factory)).success).toBe(true);
+    for (const denied of ["moderator", "content_editor"]) { f.client.from.mockClear(); f.rows.staff_roles.data = { role: denied };
+      expect((await adminMutation(input,origin,host,factory)).success).not.toBe(true); expect(f.client.from.mock.calls.some(([t]) => t === "support_tickets")).toBe(false); }
+    f.rows.staff_roles.data = { role }; f.claims.aal = "aal1"; f.client.from.mockClear();
+    expect((await adminMutation(input,origin,host,factory)).success).not.toBe(true); expect(f.client.from.mock.calls.some(([t]) => t === "support_tickets")).toBe(false);
+  });
+  it("leaves replies and internal notes untouched", async () => {
+    for (const internal of [false, true]) expect((await adminMutation({ operation: "support-reply", ticketId: target, content: "Synthetic", internal },origin,host,factory)).success).toBe(true);
+    expect(f.client.from.mock.calls.some(([t]) => t === "support_tickets")).toBe(false);
   });
 });
 
