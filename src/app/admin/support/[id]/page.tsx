@@ -2,14 +2,39 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { pageClient } from "@/lib/admin/server";
 import { StaffSupportReplyForm } from "@/components/communication/StaffSupportReplyForm";
-import { ChevronLeft, Lock, Shield } from "lucide-react";
+import { AlertCircle, ChevronLeft, Lock, Shield } from "lucide-react";
 import type { Metadata } from "next";
 import { z } from "zod";
 import { loadSupportUser } from "@/lib/admin/support-user";
+import {
+  classifySupportSender,
+  formatSupportTicketReference,
+} from "@/lib/admin/support-ticket-display";
 
 export const metadata: Metadata = {
   title: "Support Ticket Detail — FairSwap Admin",
   description: "View and respond to support inquiries.",
+};
+
+type TicketRow = {
+  id: string;
+  user_id: string | null;
+  category: string;
+  subject: string;
+  status: string;
+  priority: string;
+  assigned_to: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type MessageRow = {
+  id: string;
+  ticket_id: string;
+  sender_id: string | null;
+  is_internal_note: boolean;
+  content: string;
+  created_at: string;
 };
 
 export default async function AdminSupportDetailPage({
@@ -37,49 +62,64 @@ export default async function AdminSupportDetailPage({
     redirect("/admin");
   }
 
-  // Fetch ticket
-  const { data: ticket, error } = await supabase
-    .from("support_tickets")
-    .select(`
-      id,
-      ticket_number,
-      user_id,
-      category,
-      subject,
-      status,
-      priority,
-      assigned_to,
-      created_at,
-      updated_at
-    `)
-    .eq("id", ticketId)
-    .single();
+  // Fetch ticket. `maybeSingle` makes "no such ticket" (null, no error) distinguishable from a failed
+  // read, which pageClient surfaces as a thrown error. Only a genuinely missing ticket is a 404.
+  let ticket: TicketRow | null = null;
+  let ticketReadFailed = false;
+  try {
+    const { data, error } = await supabase
+      .from("support_tickets")
+      .select("id, user_id, category, subject, status, priority, assigned_to, created_at, updated_at")
+      .eq("id", ticketId)
+      .maybeSingle();
+    if (error) ticketReadFailed = true;
+    else ticket = (data as TicketRow | null) ?? null;
+  } catch {
+    ticketReadFailed = true;
+  }
 
-  if (error || !ticket) {
+  if (!ticketReadFailed && !ticket) {
     notFound();
+  }
+
+  if (ticketReadFailed || !ticket) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <Link
+          href="/admin/support"
+          className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-800"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Support Queue
+        </Link>
+        <div role="alert" className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-8 text-center text-gray-800">
+          <AlertCircle className="mx-auto h-10 w-10 text-rose-400" />
+          <p className="mt-3 font-semibold">This ticket could not be loaded</p>
+          <p className="text-sm">
+            This is a read failure, not a missing ticket. Refresh the page or contact the backend owner.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // Fetch ticket submitter profile
   const { profile: userObj, accountStatus } = await loadSupportUser(supabase, ticket.user_id);
 
-  // Fetch all messages (staff can see internal notes!)
-  const { data: messages } = await supabase
-    .from("support_messages")
-    .select(`
-      id,
-      ticket_id,
-      sender_id,
-      is_staff_reply,
-      is_internal_note,
-      content,
-      created_at,
-      sender:profiles (
-        id,
-        display_name
-      )
-    `)
-    .eq("ticket_id", ticketId)
-    .order("created_at", { ascending: true });
+  // Fetch all messages (staff can see internal notes!). Only canonical columns: there is no
+  // staff-reply flag column, and sender_id references auth.users, so no profiles embed is possible.
+  let messages: MessageRow[] | null = null;
+  try {
+    const { data, error } = await supabase
+      .from("support_messages")
+      .select("id, ticket_id, sender_id, is_internal_note, content, created_at")
+      .eq("ticket_id", ticketId)
+      .order("created_at", { ascending: true });
+    messages = error || !data ? null : (data as MessageRow[]);
+  } catch {
+    messages = null;
+  }
+  const messagesFailed = messages === null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -101,7 +141,7 @@ export default async function AdminSupportDetailPage({
             <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-sm font-bold text-emerald-700">
-                  #{ticket.ticket_number}
+                  #{formatSupportTicketReference(ticket.id)}
                 </span>
                 <span className="rounded bg-gray-100 px-2.5 py-0.5 text-xs font-semibold uppercase text-gray-700">
                   {ticket.category.replace("_", " ")}
@@ -116,7 +156,10 @@ export default async function AdminSupportDetailPage({
 
             <div className="mt-4 flex items-center gap-4 text-xs text-gray-600">
               <div>
-                User: <span className="font-semibold text-gray-900">{userObj?.display_name || "Deleted User"}</span>
+                User:{" "}
+                <span className="font-semibold text-gray-900">
+                  {ticket.user_id ? userObj?.display_name || "Customer unavailable" : "Deleted user"}
+                </span>
               </div>
               <div>
                 Account Status: <span className="font-semibold text-gray-900 uppercase">{accountStatus || "Unavailable"}</span>
@@ -129,14 +172,16 @@ export default async function AdminSupportDetailPage({
 
           {/* Conversation Thread */}
           <div className="space-y-4">
-            {messages && messages.length > 0 ? (
+            {messagesFailed ? (
+              <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-8 text-center text-sm text-gray-800">
+                <p className="font-semibold">The messages for this ticket could not be loaded</p>
+                <p>This is a read failure, not an empty thread. Refresh the page or contact the backend owner.</p>
+              </div>
+            ) : messages && messages.length > 0 ? (
               messages.map((m) => {
-                const isInternal = m.is_internal_note;
-                const isStaff = m.is_staff_reply;
-                const senderObj = Array.isArray(m.sender) ? m.sender[0] : m.sender;
-                const senderName = isStaff
-                  ? senderObj?.display_name || "Staff Member"
-                  : userObj?.display_name || "Customer";
+                const sender = classifySupportSender(m, ticket.user_id);
+                const isInternal = sender === "internal_note";
+                const isStaff = sender === "staff";
 
                 return (
                   <div
@@ -159,12 +204,14 @@ export default async function AdminSupportDetailPage({
                         ) : isStaff ? (
                           <span className="inline-flex items-center gap-1 font-semibold text-emerald-800">
                             <Shield className="h-3.5 w-3.5" />
-                            {senderName} (Staff Reply)
+                            Support team (Staff Reply)
+                          </span>
+                        ) : sender === "customer" ? (
+                          <span className="font-semibold text-gray-800">
+                            {userObj?.display_name || "Customer"} (Customer)
                           </span>
                         ) : (
-                          <span className="font-semibold text-gray-800">
-                            {senderName} (Customer)
-                          </span>
+                          <span className="font-semibold text-gray-600">Sender unavailable</span>
                         )}
                       </div>
 
@@ -189,11 +236,18 @@ export default async function AdminSupportDetailPage({
 
         {/* Right 1 col: Reply & Status Management */}
         <div>
-          <StaffSupportReplyForm
-            ticketId={ticket.id}
-            currentStatus={ticket.status}
-            currentPriority={ticket.priority}
-          />
+          {messagesFailed ? (
+            <div role="status" className="rounded-xl border border-gray-200 bg-white p-5 text-sm text-gray-700 shadow-sm">
+              Replying and status changes are unavailable until the conversation can be loaded, so no
+              action is taken without the ticket&apos;s context.
+            </div>
+          ) : (
+            <StaffSupportReplyForm
+              ticketId={ticket.id}
+              currentStatus={ticket.status}
+              currentPriority={ticket.priority}
+            />
+          )}
         </div>
       </div>
     </div>
