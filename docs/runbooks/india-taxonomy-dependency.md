@@ -1,0 +1,7 @@
+# India taxonomy dependency — 24 October 2026
+
+Ordinary Goods additions use the existing category and attribute tables and existing guarded listing-review UI (`src/app/admin/listings/[listingId]/page.tsx`); item type and brand appear in the current attribute packet. No Admin application or authorization change is needed for these additions.
+
+Other remains unavailable in the Web picker and is not seeded as a posting category. Existing text automation can approve clean text, and the current Admin UI has no category-reclassification action. Do not activate fallback posting until Backend enforces mandatory staff moderation for every submit/finalizer path and provides revision-safe reclassification with AAL2 role authorization, target-category/attribute validation, release-gate validation and append-only audit evidence. Then implement a guarded Admin action and confirmation UI with stale-review and unauthorized-user regression tests; no service-role client or direct category UPDATE shortcut.
+
+Car seats also remain unavailable until recall, crash-damage and missing-parts safeguards exist. No category activation, staff mutation, RLS change or hosted operation is part of this Admin handoff. New environment variables: **None**. Any future coordinated application release follows staging database → staging applications → production database → production applications and the existing production-release runbook.
