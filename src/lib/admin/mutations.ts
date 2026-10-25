@@ -1,4 +1,5 @@
 import "server-only";
+import { phoneEntrySchema } from "./mobile-catalogue";
 import { releaseAllows } from "./release-policy";
 import { z } from "zod";
 import { staffAccess, type StaffRole } from "@/lib/auth/guard";
@@ -13,6 +14,7 @@ const text = z.string().trim().min(1).max(3000);
 const optionalText = z.string().trim().max(3000).nullable().optional();
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100);
 const schema = z.discriminatedUnion("operation", [
+  z.object({operation:z.literal("phone-catalogue"),kind:z.enum(["brand","model"]),entry:phoneEntrySchema}).strict(),
   z.object({ operation: z.literal("moderate"), listingId: id, action: z.enum(["approve", "reject", "remove"]), reason: optionalText, revision: z.number().int().positive(), status: z.string().max(30), reviewFingerprint: z.string().regex(/^[0-9a-f]{64}$/).optional() }).strict(),
   z.object({ operation: z.literal("user-status"), targetUserId: id, newStatus: z.enum(["active", "suspended"]), reason: z.string().trim().min(10).max(500), expectedStatus: z.string().max(30) }).strict(),
   z.object({ operation: z.literal("assign-role"), targetUserId: id, role: z.enum(["administrator", "moderator", "support_agent", "content_editor"]) }).strict(),
@@ -27,6 +29,7 @@ const schema = z.discriminatedUnion("operation", [
 export type AdminMutation = z.infer<typeof schema>;
 export type AdminResult = { error?: string; success?: boolean; message?: string };
 const roles: Record<AdminMutation["operation"], readonly StaffRole[]> = {
+  "phone-catalogue":["administrator","content_editor"],
   moderate: ["administrator", "moderator"], "user-status": ["administrator", "moderator"],
   "assign-role": ["administrator"], "revoke-role": ["administrator"], "privacy-status": ["administrator"],
   "resolve-report": ["administrator", "moderator"], "support-reply": ["administrator", "support_agent"],
@@ -53,6 +56,10 @@ export async function adminMutation(input: unknown, origin: string | null, host:
     let rpc: string;
     let args: Record<string, unknown>;
     switch (value.operation) {
+      case "phone-catalogue": {
+        if(value.kind==="model"&&(!value.entry.brand_id||typeof value.entry.older_group!=="boolean"||typeof value.entry.other!=="boolean"||(value.entry.other&&value.entry.older_group)))return {error:"Select a brand and valid model grouping."};
+        rpc="admin_phone_catalogue";args={kind:value.kind,entry:value.entry};break;
+      }
       case "moderate": {
         const row = await client.from("listings").select("id,seller_id,status,revision,categories(macro_category)").eq("id", value.listingId).maybeSingle();
         if (row.error || !row.data || row.data.seller_id === access.userId) return failed;
@@ -95,7 +102,7 @@ export async function adminMutation(input: unknown, origin: string | null, host:
     const result = await client.rpc(rpc, args);
     if (value.operation === "moderate" && result.error?.code === "PT409") return { error: "The listing changed. Refresh and review it again." };
     if (result.error) return result.error.code === "23505" ? { error: "That value already exists. Refresh and check for duplicates." } : failed;
-    if (["moderate", "category", "location"].includes(value.operation) && result.data?.success !== true) return failed;
+    if (["moderate", "category", "location", "phone-catalogue"].includes(value.operation) && result.data?.success !== true) return failed;
     if (value.operation === "support-reply" && !id.safeParse(result.data).success) return failed;
     if (value.operation === "moderate") {
       const expected = { approve: "active", reject: "rejected", remove: "removed" }[value.action];
