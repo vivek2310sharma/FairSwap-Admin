@@ -39,7 +39,7 @@ function fixture() {
       if (name === "has_current_policy_acceptance") return { data: true, error: null };
       if (name === "admin_search_users") return { data: [{ user_id: target, role: null, account_status: "active" }], error: null };
       if (name === "moderate_listing_reviewed") { rows.listings.data = { id: target, status: args?.action === "reject" ? "rejected" : args?.action === "remove" ? "removed" : "active" }; return { data: { success: true }, error: null }; }
-      if (["admin_manage_category", "admin_manage_location"].includes(name)) return { data: { success: true }, error: null };
+      if (["admin_manage_category", "admin_manage_location", "admin_phone_catalogue"].includes(name)) return { data: { success: true }, error: null };
       if (name === "admin_update_ticket_state") { rows.support_tickets.data = { ...(rows.support_tickets.data as object), status: args?.status, priority: args?.priority }; return { data: null, error: null }; }
       if (["admin_reply_support_ticket", "admin_add_ticket_internal_note"].includes(name)) return { data: target, error: null };
       return { data: null, error: null };
@@ -60,6 +60,8 @@ beforeEach(() => {
 });
 const moderate = { operation: "moderate", listingId: target, action: "approve", revision: 2, status: "pending_review" };
 const cases = [
+  [{operation:"phone-catalogue",kind:"brand",entry:{name:"Synthetic brand",aliases:["synthetic"],enabled:true,sort_order:22}},"admin_phone_catalogue"],
+  [{operation:"phone-catalogue",kind:"model",entry:{brand_id:target,name:"Synthetic model",aliases:[],enabled:true,sort_order:1,older_group:false,other:false}},"admin_phone_catalogue"],
   [moderate, "moderate_listing_reviewed"],
   [{ ...moderate, action: "reject", reason: "Synthetic review reason" }, "moderate_listing_reviewed"],
   [{ ...moderate, action: "remove", reason: "Synthetic removal reason" }, "moderate_listing_reviewed"],
@@ -89,7 +91,7 @@ describe("migrated RPC integrations", () => {
   it.each(cases.flatMap(([input,rpc]) => STAFF_ROLES.map(role => ({input,rpc,role}))))("enforces the server role boundary for $role / $rpc", async ({input,rpc,role}) => {
     f.rows.staff_roles.data = {role};
     if (input.operation === "user-status" && "newStatus" in input && input.newStatus === "active") f.client.rpc.mockImplementation(async name => ({ data: name === "has_current_policy_acceptance" ? true : name === "admin_search_users" ? [{user_id:target,account_status:"suspended",role:null}] : null,error:null }));
-    const permitted = role === "administrator" || (role === "moderator" && ["moderate","user-status","resolve-report"].includes(input.operation)) || (role === "support_agent" && ["support-reply","ticket-status"].includes(input.operation)) || (role === "content_editor" && input.operation === "category");
+    const permitted = role === "administrator" || (role === "moderator" && ["moderate","user-status","resolve-report"].includes(input.operation)) || (role === "support_agent" && ["support-reply","ticket-status"].includes(input.operation)) || (role === "content_editor" && ["category","phone-catalogue"].includes(input.operation));
     const result = await adminMutation(input,origin,host,factory);
     expect(result.success === true).toBe(permitted);
     expect(f.client.rpc.mock.calls.some(([name]) => name === rpc)).toBe(permitted);

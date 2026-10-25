@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { MobileReviewEvidence } from "@/components/mobile-review-evidence";
 import { notFound, redirect } from "next/navigation";
 import { pageClient } from "@/lib/admin/server";
 import { ListingPhoto } from "@/components/listing-photo";
@@ -235,6 +237,7 @@ export default async function AdminListingDetailPage({
             )}
           </div>
 
+          <MobileReviewEvidence client={supabase as SupabaseClient} listingId={id}/>
           {/* Description */}
           <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm space-y-2">
             <h2 className="text-sm font-bold text-gray-900">Description</h2>
