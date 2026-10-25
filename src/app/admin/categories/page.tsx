@@ -61,6 +61,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
           ← Staff Portal
         </Link>
         <h1 className="mt-2 text-2xl font-bold text-gray-900">Category Administration</h1>
+        <Link href="/admin/catalogue/mobiles" className="inline-block py-3 font-medium text-emerald-700 underline">Mobile Catalogue</Link>
         <p className="mt-1 text-sm text-gray-600">
           Create and activate marketplace categories. Attribute schemas are read-only; schema editing is unavailable.
         </p>
