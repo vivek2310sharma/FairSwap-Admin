@@ -26,6 +26,7 @@ const schema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("ticket-status"), ticketId: id, status: z.enum(["open", "in_progress", "awaiting_user", "resolved", "closed"]), priority: z.enum(["low", "normal", "high", "urgent"]) }).strict(),
   z.object({ operation: z.literal("category"), action: z.enum(["create", "update"]), categoryId: id.nullable(), slug: slug.nullable(), name: z.string().trim().min(1).max(150).nullable(), description: optionalText, icon: z.string().max(100).nullable(), sortOrder: z.number().int().min(0).max(100000).nullable(), active: z.boolean() }).strict(),
   z.object({ operation: z.literal("location"), action: z.enum(["create_city", "update_city", "create_locality", "update_locality"]), cityId: id.nullable(), localityId: id.nullable(), name: z.string().trim().min(1).max(150).nullable(), state: z.string().trim().min(1).max(150).nullable(), slug: slug.nullable(), active: z.boolean() }).strict(),
+  z.object({ operation: z.literal("idv-revoke"), targetUserId: id, reason: z.string().trim().min(5).max(500) }).strict(),
 ]);
 export type AdminMutation = z.infer<typeof schema>;
 export type AdminResult = RatingsResult;
@@ -36,6 +37,7 @@ const roles: Record<AdminMutation["operation"], readonly StaffRole[]> = {
   "assign-role": ["administrator"], "revoke-role": ["administrator"], "privacy-status": ["administrator"],
   "resolve-report": ["administrator", "moderator"], "support-reply": ["administrator", "support_agent"],
   "ticket-status": ["administrator", "support_agent"], category: ["administrator", "content_editor"], location: ["administrator"],
+  "idv-revoke": ["administrator"],
 };
 const failed: AdminResult = { error: "Operation not confirmed. Refresh the record before deciding whether to try again." };
 
@@ -87,11 +89,19 @@ export async function adminMutation(input: unknown, origin: string | null, host:
       case "ticket-status": rpc = "admin_update_ticket_state"; args = { ticket_id: value.ticketId, status: value.status, priority: value.priority }; break;
       case "category": rpc = "admin_manage_category"; args = { action: value.action, category_id: value.categoryId, slug: value.slug, name: value.name, description: value.description || null, icon: value.icon, sort_order: value.sortOrder, is_active: value.active }; break;
       case "location": rpc = "admin_manage_location"; args = { action: value.action, city_id: value.cityId, locality_id: value.localityId, name: value.name, state: value.state, slug: value.slug, is_active: value.active }; break;
+      case "idv-revoke": {
+        if (value.targetUserId === access.userId) return { error: "Administrators cannot revoke their own verification." };
+        rpc = "admin_revoke_verification"; args = { p_target_user_id: value.targetUserId, p_reason: value.reason }; break;
+      }
     }
     const result = await client.rpc(rpc, args);
     if (value.operation === "moderate" && result.error?.code === "PT409") return { error: "The listing changed. Refresh and review it again." };
     if (result.error) return result.error.code === "23505" ? { error: "That value already exists. Refresh and check for duplicates." } : failed;
-    if (["moderate", "category", "location", "phone-catalogue"].includes(value.operation) && result.data?.success !== true) return failed;
+    if (value.operation === "idv-revoke" && (result.data as { success?: boolean } | null)?.success !== true) {
+      const err = (result.data as { error?: string } | null)?.error;
+      return { error: err ? `Verification revocation failed: ${err}` : "Verification revocation not confirmed. Refresh the record before deciding whether to try again." };
+    }
+    if (["moderate", "category", "location", "phone-catalogue"].includes(value.operation) && (result.data as { success?: boolean } | null)?.success !== true) return failed;
     if (value.operation === "support-reply" && !id.safeParse(result.data).success) return failed;
     if (value.operation === "moderate") {
       const expected = { approve: "active", reject: "rejected", remove: "removed" }[value.action];
