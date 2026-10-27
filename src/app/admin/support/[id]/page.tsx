@@ -6,6 +6,7 @@ import { ChevronLeft, Lock, Shield } from "lucide-react";
 import type { Metadata } from "next";
 import { z } from "zod";
 import { loadSupportUser } from "@/lib/admin/support-user";
+import { ratingsEnabled } from "@/lib/admin/ratings/feature";
 
 export const metadata: Metadata = {
   title: "Support Ticket Detail — FairSwap Admin",
@@ -96,6 +97,12 @@ export default async function AdminSupportDetailPage({
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Left 2 cols: Ticket Overview & Thread */}
         <div className="space-y-6 lg:col-span-2">
+          {staffData.role === "administrator" && ratingsEnabled() && (
+            <aside className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
+              <Link prefetch={false} className="font-semibold text-emerald-800 underline" href={`/admin/ratings/tickets/${ticketId}`}>Investigate a linked Ratings case</Link>
+              <p className="mt-2 text-slate-600">If this ticket has a linked Ratings case, evidence requires a separate audited reason. Ratings decisions do not update support-ticket status.</p>
+            </aside>
+          )}
           {/* Header Card */}
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-gray-100">
