@@ -97,10 +97,11 @@ export async function adminMutation(input: unknown, origin: string | null, host:
     const result = await client.rpc(rpc, args);
     if (value.operation === "moderate" && result.error?.code === "PT409") return { error: "The listing changed. Refresh and review it again." };
     if (result.error) return result.error.code === "23505" ? { error: "That value already exists. Refresh and check for duplicates." } : failed;
-    if (["moderate", "category", "location", "phone-catalogue", "idv-revoke"].includes(value.operation) && (result.data as { success?: boolean } | null)?.success !== true) {
+    if (value.operation === "idv-revoke" && (result.data as { success?: boolean } | null)?.success !== true) {
       const err = (result.data as { error?: string } | null)?.error;
-      return { error: err ? `Revocation failed: ${err}` : "Revocation operation not confirmed. Refresh the record before deciding whether to try again." };
+      return { error: err ? `Verification revocation failed: ${err}` : "Verification revocation not confirmed. Refresh the record before deciding whether to try again." };
     }
+    if (["moderate", "category", "location", "phone-catalogue"].includes(value.operation) && (result.data as { success?: boolean } | null)?.success !== true) return failed;
     if (value.operation === "support-reply" && !id.safeParse(result.data).success) return failed;
     if (value.operation === "moderate") {
       const expected = { approve: "active", reject: "rejected", remove: "removed" }[value.action];
