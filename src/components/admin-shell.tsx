@@ -70,6 +70,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Flag,
         roles: ["administrator", "moderator"],
       },
+      {
+        label: "Ratings",
+        href: "/admin/ratings",
+        icon: ShieldCheck,
+        roles: ["administrator", "moderator"],
+      },
     ],
   },
   {

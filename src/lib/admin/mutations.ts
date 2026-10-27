@@ -1,4 +1,6 @@
 import "server-only";
+import { ratingsInputSchema, type RatingsResult } from "./ratings/contract";
+import { executeRatings } from "./ratings/server";
 import { phoneEntrySchema } from "./mobile-catalogue";
 import { releaseAllows } from "./release-policy";
 import { z } from "zod";
@@ -14,6 +16,7 @@ const text = z.string().trim().min(1).max(3000);
 const optionalText = z.string().trim().max(3000).nullable().optional();
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100);
 const schema = z.discriminatedUnion("operation", [
+  ratingsInputSchema,
   z.object({operation:z.literal("phone-catalogue"),kind:z.enum(["brand","model"]),entry:phoneEntrySchema}).strict(),
   z.object({ operation: z.literal("moderate"), listingId: id, action: z.enum(["approve", "reject", "remove"]), reason: optionalText, revision: z.number().int().positive(), status: z.string().max(30), reviewFingerprint: z.string().regex(/^[0-9a-f]{64}$/).optional() }).strict(),
   z.object({ operation: z.literal("user-status"), targetUserId: id, newStatus: z.enum(["active", "suspended"]), reason: z.string().trim().min(10).max(500), expectedStatus: z.string().max(30) }).strict(),
@@ -27,8 +30,9 @@ const schema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("location"), action: z.enum(["create_city", "update_city", "create_locality", "update_locality"]), cityId: id.nullable(), localityId: id.nullable(), name: z.string().trim().min(1).max(150).nullable(), state: z.string().trim().min(1).max(150).nullable(), slug: slug.nullable(), active: z.boolean() }).strict(),
 ]);
 export type AdminMutation = z.infer<typeof schema>;
-export type AdminResult = { error?: string; success?: boolean; message?: string };
+export type AdminResult = RatingsResult;
 const roles: Record<AdminMutation["operation"], readonly StaffRole[]> = {
+  ratings: ["administrator", "moderator"],
   "phone-catalogue":["administrator","content_editor"],
   moderate: ["administrator", "moderator"], "user-status": ["administrator", "moderator"],
   "assign-role": ["administrator"], "revoke-role": ["administrator"], "privacy-status": ["administrator"],
@@ -45,6 +49,7 @@ export async function adminMutation(input: unknown, origin: string | null, host:
   if (!parsed.success) return { error: "Check the submitted identifiers and field values." };
   const value = parsed.data;
   if (!releaseAllows(value)) return { error: "This operation is unavailable in the current release." };
+  if (value.operation === "ratings") return executeRatings(value, factory);
   if (value.operation === "moderate" && value.action !== "approve" && !value.reason?.trim()) return { error: "A reason is required." };
   if (value.operation === "category" && (value.action === "create" ? !value.slug || !value.name : !value.categoryId)) return { error: "Category identity, name and slug are required for this action." };
   if (value.operation === "location" && ((value.action === "create_city" && (!value.name || !value.state || !value.slug)) || (value.action === "create_locality" && (!value.cityId || !value.name || !value.slug)) || (value.action === "update_city" && !value.cityId) || (value.action === "update_locality" && !value.localityId))) return { error: "Check the city/locality identity and required fields." };
