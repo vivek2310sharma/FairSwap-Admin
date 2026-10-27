@@ -14,3 +14,7 @@ export async function updateAccountStatusAction(_state: AdminResult | null, form
 export async function resolvePrivacyRequestAction(_state: AdminResult | null, form: FormData): Promise<AdminResult> {
   return submitAdminMutation({ operation: "privacy-status", requestId: field(form,"requestId")!, newStatus: field(form,"newStatus") as "pending" | "in_progress" | "resolved" | "rejected", notes: field(form,"notes") }, ["/admin/privacy","/admin/audit"]);
 }
+export async function revokeVerificationAction(_state: AdminResult | null, form: FormData): Promise<AdminResult> {
+  return submitAdminMutation({ operation: "idv-revoke", targetUserId: field(form,"targetUserId")!, reason: field(form,"reason")! }, ["/admin/users","/admin/audit"]);
+}
+
