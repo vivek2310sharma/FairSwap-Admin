@@ -1128,6 +1128,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_identity_verifications: {
+        Row: {
+          badge_issued: boolean
+          created_at: string
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+          verification_status: string
+          verified_at: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+        }
+        Insert: {
+          badge_issued?: boolean
+          created_at?: string
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+        }
+        Update: {
+          badge_issued?: boolean
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
