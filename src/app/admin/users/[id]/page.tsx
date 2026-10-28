@@ -1,9 +1,10 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { pageClient } from "@/lib/admin/server";
-import { ChevronLeft, Shield, User, Package, AlertTriangle, FileText, Calendar, Mail, ExternalLink } from "lucide-react";
+import { ChevronLeft, Shield, User, Package, AlertTriangle, FileText, Calendar, Mail, ExternalLink, BadgeCheck } from "lucide-react";
 import type { Metadata } from "next";
 import UserStatusForm from "../user-status-form";
+import VerificationRevocationForm from "../verification-revocation-form";
 import type { AdminUserSearchResult } from "../page";
 import type { Database } from "@/types/database";
 import { z } from "zod";
@@ -161,6 +162,39 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
     }));
   }
 
+  // Fetch verification projection
+  let verification: {
+    verification_status: string;
+    badge_issued: boolean;
+    verified_at: string | null;
+    valid_until: string | null;
+    revoked_at: string | null;
+    revocation_reason: string | null;
+  } | null = null;
+
+  try {
+    const { data: vData } = await supabase
+      .from("user_identity_verifications")
+      .select("verification_status, badge_issued, verified_at, valid_until, revoked_at")
+      .eq("user_id", targetUserId)
+      .maybeSingle();
+    if (vData) {
+      verification = {
+        verification_status: vData.verification_status,
+        badge_issued: vData.badge_issued,
+        verified_at: vData.verified_at,
+        valid_until: vData.valid_until,
+        revoked_at: vData.revoked_at,
+        revocation_reason: null, // Staff-only internal revocation notes kept separate from public table
+      };
+    }
+  } catch {
+    verification = null;
+  }
+
+  const isCallerAdmin = callerStaff.role === "administrator";
+  const canRevokeBadge = isCallerAdmin && !isSelf && (verification?.badge_issued || verification?.verification_status === "verified");
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Header / Breadcrumb */}
@@ -198,6 +232,24 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
                 {targetUser.role}
               </span>
             )}
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
+                verification?.badge_issued
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : verification?.verification_status === "revoked"
+                  ? "bg-red-50 text-red-700 border border-red-200"
+                  : "bg-gray-100 text-gray-700 border border-gray-200"
+              }`}
+            >
+              <BadgeCheck className="h-3.5 w-3.5" />
+              <span>
+                {verification?.badge_issued
+                  ? "ID VERIFIED"
+                  : verification?.verification_status === "revoked"
+                  ? "ID REVOKED"
+                  : "ID UNVERIFIED"}
+              </span>
+            </span>
           </div>
         </div>
       </div>
@@ -333,6 +385,18 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
           >
             <AlertTriangle className="h-4 w-4" />
             Recent Safety Reports ({reports?.length || 0})
+          </Link>
+
+          <Link
+            href={`/admin/users/${targetUserId}?tab=verification`}
+            className={`pb-4 px-1 text-sm font-medium border-b-2 flex items-center gap-2 ${
+              tab === "verification"
+                ? "border-emerald-600 text-emerald-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            <BadgeCheck className="h-4 w-4" />
+            Identity Verification
           </Link>
 
           <Link
@@ -479,6 +543,101 @@ export default async function AdminUserDetailPage({ params, searchParams }: Admi
             </table>
             </div>
           )}
+        </div>
+      )}
+
+      {tab === "verification" && (
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden p-6">
+          <div className="flex flex-col gap-6">
+            <div>
+              <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <BadgeCheck className="h-5 w-5 text-emerald-600" />
+                DigiLocker Identity Verification Record
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
+                Authoritative verification state from backend security projection. No direct PII or documents stored.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
+              <div>
+                <dt className="text-[10px] uppercase font-semibold text-gray-500 tracking-wider">Status</dt>
+                <dd className="mt-1 text-sm font-bold text-gray-900 uppercase">
+                  {verification?.verification_status || "not_started"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase font-semibold text-gray-500 tracking-wider">Badge Issued</dt>
+                <dd className="mt-1 text-sm font-bold">
+                  {verification?.badge_issued ? (
+                    <span className="text-emerald-700">YES (ACTIVE)</span>
+                  ) : (
+                    <span className="text-gray-600">NO</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase font-semibold text-gray-500 tracking-wider">Verified Date</dt>
+                <dd className="mt-1 text-sm text-gray-800">
+                  {verification?.verified_at
+                    ? new Date(verification.verified_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase font-semibold text-gray-500 tracking-wider">Valid Until</dt>
+                <dd className="mt-1 text-sm text-gray-800">
+                  {verification?.valid_until
+                    ? new Date(verification.valid_until).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })
+                    : "Standard Validity"}
+                </dd>
+              </div>
+            </div>
+
+            {verification?.revocation_reason && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+                <span className="font-semibold">Revocation Reason: </span>
+                <span>{verification.revocation_reason}</span>
+                {verification.revoked_at && (
+                  <span className="block mt-0.5 text-[11px] text-red-600">
+                    Revoked on: {new Date(verification.revoked_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Controlled Audited Revocation Section */}
+            <div className="pt-6 border-t border-gray-100">
+              <h4 className="text-sm font-bold text-gray-900 mb-2">Revoke Verification Badge</h4>
+              <p className="text-xs text-gray-500 mb-4">
+                Administrators can revoke verified status if identity fraud, account compromise, or regulatory compliance requires badge removal.
+              </p>
+
+              {callerStaff.role !== "administrator" ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                  <span className="font-semibold">Permission Restricted: </span>
+                  Verification revocation requires the Administrator role with verified AAL2. Moderators cannot revoke verified badges.
+                </div>
+              ) : isSelf ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                  <span className="font-semibold">Self-Action Restricted: </span>
+                  Administrators cannot alter or revoke their own verification records.
+                </div>
+              ) : !verification?.badge_issued && verification?.verification_status !== "verified" ? (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+                  User does not currently hold an active verified badge.
+                </div>
+              ) : (
+                <div className="max-w-md">
+                  <VerificationRevocationForm
+                    targetUserId={targetUserId}
+                    isSelf={isSelf}
+                    canRevoke={canRevokeBadge}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

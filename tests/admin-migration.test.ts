@@ -330,3 +330,76 @@ describe("first Production release restrictions", () => {
     expect(f.client.rpc.mock.calls.filter(([name])=>name === "moderate_listing_reviewed")).toHaveLength(1);
   });
 });
+
+describe("idv-revoke error message isolation", () => {
+  const revokeInput = { operation: "idv-revoke", targetUserId: target, reason: "Synthetic revocation reason" };
+
+  it("succeeds and calls admin_revoke_verification for an administrator", async () => {
+    f.client.rpc.mockImplementation(async name =>
+      name === "has_current_policy_acceptance" ? { data: true, error: null } :
+      name === "admin_revoke_verification" ? { data: { success: true }, error: null } :
+      { data: null, error: null }
+    );
+    const result = await adminMutation(revokeInput, origin, host, factory);
+    expect(result).toMatchObject({ success: true });
+    expect(f.client.rpc).toHaveBeenCalledWith("admin_revoke_verification", { p_target_user_id: target, p_reason: "Synthetic revocation reason" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("blocks an administrator from revoking their own verification", async () => {
+    const selfInput = { ...revokeInput, targetUserId: actor };
+    const result = await adminMutation(selfInput, origin, host, factory);
+    expect(result.error).toBeDefined();
+    expect(f.client.rpc).not.toHaveBeenCalledWith("admin_revoke_verification", expect.any(Object));
+  });
+
+  it("surfaces revocation-specific wording when success is not true and RPC provides no message", async () => {
+    f.client.rpc.mockImplementation(async name =>
+      name === "has_current_policy_acceptance" ? { data: true, error: null } :
+      name === "admin_revoke_verification" ? { data: { success: false }, error: null } :
+      { data: null, error: null }
+    );
+    const result = await adminMutation(revokeInput, origin, host, factory);
+    expect(result.success).not.toBe(true);
+    expect(result.error).toContain("Verification revocation not confirmed");
+    expect(result.error).not.toContain("Revocation operation");
+  });
+
+  it("prefixes the RPC-supplied error with revocation-specific wording", async () => {
+    f.client.rpc.mockImplementation(async name =>
+      name === "has_current_policy_acceptance" ? { data: true, error: null } :
+      name === "admin_revoke_verification" ? { data: { success: false, error: "verification record not found" }, error: null } :
+      { data: null, error: null }
+    );
+    const result = await adminMutation(revokeInput, origin, host, factory);
+    expect(result.success).not.toBe(true);
+    expect(result.error).toContain("Verification revocation failed:");
+    expect(result.error).toContain("verification record not found");
+  });
+
+  it("does not surface revocation wording for category or phone-catalogue failures", async () => {
+    const categoryInput = { operation: "category", action: "create", categoryId: null, name: "Synthetic", slug: "synthetic", description: null, icon: null, sortOrder: 0, active: true };
+    const phoneCatalogueInput = { operation: "phone-catalogue", kind: "brand", entry: { name: "Synthetic brand", aliases: ["synthetic"], enabled: true, sort_order: 22 } };
+    for (const input of [categoryInput, phoneCatalogueInput]) {
+      f.client.rpc.mockImplementation(async name =>
+        name === "has_current_policy_acceptance" ? { data: true, error: null } :
+        { data: { success: false }, error: null }
+      );
+      const result = await adminMutation(input, origin, host, factory);
+      expect(result.success).not.toBe(true);
+      expect(result.error).not.toContain("revocation");
+      expect(result.error).not.toContain("Revocation");
+      expect(result.error).not.toContain("Verification");
+    }
+  });
+
+  it("denies a non-administrator before calling admin_revoke_verification", async () => {
+    for (const role of ["moderator", "support_agent", "content_editor"]) {
+      f.rows.staff_roles.data = { role };
+      const result = await adminMutation(revokeInput, origin, host, factory);
+      expect(result.success).not.toBe(true);
+      expect(f.client.rpc).not.toHaveBeenCalledWith("admin_revoke_verification", expect.any(Object));
+      f.client.rpc.mockClear();
+    }
+  });
+});
