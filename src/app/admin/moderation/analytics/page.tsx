@@ -1,7 +1,8 @@
 import "server-only";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { pageClient } from "@/lib/admin/server";
+import { requestClient } from "@/lib/supabase/server";
+import { staffAccess } from "@/lib/auth/guard";
 import {
   AnalyticsRangeSchema,
   ModerationAnalyticsPayloadSchema,
@@ -61,30 +62,20 @@ export default async function AdminModerationAnalyticsPage({ searchParams }: Pag
   const parsedRange = AnalyticsRangeSchema.safeParse(rawRange ?? "today");
   const selectedRange: AnalyticsRange = parsedRange.success ? parsedRange.data : "today";
 
-  // Enforce administrator-only authorization at page client boundary
-  const supabase = await pageClient(["administrator"]);
+  // Enforce administrator-only authorization with AAL2 via standard staffAccess
+  const client = await requestClient();
+  if (!client) throw new Error("Configuration unavailable.");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/auth/sign-in?next=/admin/moderation/analytics`);
+  const access = await staffAccess(client, true, ["administrator"]);
+  if (!access.allowed) {
+    if (access.reason === "sign-in") redirect("/auth/sign-in?next=/admin/moderation/analytics");
+    if (access.reason === "mfa") redirect("/auth/mfa");
+    if (access.reason === "denied") redirect("/admin?denied=1");
+    redirect("/admin");
   }
 
-  // Authoritative AAL2 administrator check
-  const { data: staffData, error: staffError } = await supabase
-    .from("staff_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (staffError || !staffData || staffData.role !== "administrator") {
-    redirect("/admin?denied=1");
-  }
-
-  // Single secure Supabase RPC call
-  const { data: rpcResult, error: rpcError } = await (supabase.rpc as unknown as (
+  // Invoke RPC directly on the authenticated client without checkedQuery swallowing the specific missing-function code
+  const { data: rpcResult, error: rpcError } = await (client.rpc as unknown as (
     fn: string,
     args?: Record<string, unknown>
   ) => Promise<{ data: unknown; error: { message?: string; code?: string } | null }>)(
@@ -96,21 +87,22 @@ export default async function AdminModerationAnalyticsPage({ searchParams }: Pag
   let backendUnmigrated = false;
 
   if (rpcError) {
-    // If function does not exist yet because migration is unapplied
-    if (
-      rpcError.message?.includes("function") ||
-      rpcError.message?.includes("does not exist") ||
+    // Discriminate between missing migration (PGRST202 or 42883) and real runtime failures
+    const isMissingFunction =
       rpcError.code === "PGRST202" ||
-      rpcError.code === "42883"
-    ) {
+      rpcError.code === "42883" ||
+      rpcError.message?.includes("function") ||
+      rpcError.message?.includes("does not exist");
+
+    if (isMissingFunction) {
       backendUnmigrated = true;
     } else {
-      throw new Error(`Failed to load moderation analytics: ${rpcError.message}`);
+      throw new Error("Data unavailable. Refresh or contact the backend owner.");
     }
   } else {
     const parsedPayload = ModerationAnalyticsPayloadSchema.safeParse(rpcResult);
     if (!parsedPayload.success) {
-      throw new Error("Invalid moderation analytics contract received from database.");
+      throw new Error("Data unavailable. Refresh or contact the backend owner.");
     }
     analytics = parsedPayload.data;
   }
@@ -207,17 +199,15 @@ export default async function AdminModerationAnalyticsPage({ searchParams }: Pag
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Image Scans Attempted
+                  Per-Image Scan Attempts
                 </span>
                 <Clock className="w-4 h-4 text-amber-600" />
               </div>
-              <p className="text-2xl font-bold text-slate-900 mt-2">
-                {analytics.image_scans.available ? analytics.image_scans.count : "Unavailable"}
+              <p className="text-2xl font-bold text-slate-900 mt-2 text-slate-400">
+                Unavailable
               </p>
               <p className="text-2xs text-slate-400 mt-1">
-                {analytics.image_scans.available
-                  ? "Timestamped scan receipts"
-                  : "Requires PR #84 migration"}
+                Awaiting per-image scan telemetry
               </p>
             </div>
           </div>

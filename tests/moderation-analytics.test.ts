@@ -44,7 +44,7 @@ describe("Moderation Analytics Contracts & Schemas", () => {
         available: false,
         count: 0,
         status: "unavailable",
-        note: "Scan receipts table not deployed yet (PR #84 pending)",
+        label: "Per-image scan attempts unavailable until telemetry is deployed",
       },
       costs: {
         azure: "Not connected",
@@ -78,6 +78,44 @@ describe("Moderation Analytics Contracts & Schemas", () => {
 
     const parsed = ModerationAnalyticsPayloadSchema.safeParse(samplePayload);
     expect(parsed.success).toBe(true);
+  });
+
+  it("strictly enforces 'unavailable' for image scan status", () => {
+    const invalidScanPayload = {
+      range: "today",
+      window_start: "2026-11-02T00:00:00+05:30",
+      window_end: "2026-11-02T10:00:00+05:30",
+      generated_at_ist: "2026-11-02T10:00:00+05:30",
+      metrics: {
+        listings_submitted: 0,
+        listings_evaluated: 0,
+        total_evaluations: 0,
+        images_uploaded: 0,
+        images_ready: 0,
+        images_failed: 0,
+      },
+      five_checks: {},
+      decisions: {
+        auto_approved: 0,
+        routed_to_admin: 0,
+        escalated_to_admin: 0,
+        rejected_invalid: 0,
+      },
+      image_scans: {
+        available: true,
+        count: 10,
+        status: "active", // Disallowed without per-image telemetry
+      },
+      costs: {
+        azure: "Not connected",
+        openai: "Not connected",
+        status: "not_connected",
+      },
+      history: [],
+    };
+
+    const parsed = ModerationAnalyticsPayloadSchema.safeParse(invalidScanPayload);
+    expect(parsed.success).toBe(false);
   });
 
   it("strictly enforces 'Not connected' for costs without dummy numbers", () => {

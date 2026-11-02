@@ -50,8 +50,8 @@ export const ModerationAnalyticsPayloadSchema = z.object({
   image_scans: z.object({
     available: z.boolean(),
     count: z.number().int().nonnegative(),
-    status: z.string(),
-    note: z.string().nullable().optional(),
+    status: z.literal("unavailable"),
+    label: z.string().optional(),
   }),
   costs: z.object({
     azure: z.literal("Not connected"),
