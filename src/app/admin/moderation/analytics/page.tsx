@@ -87,12 +87,8 @@ export default async function AdminModerationAnalyticsPage({ searchParams }: Pag
   let backendUnmigrated = false;
 
   if (rpcError) {
-    // Discriminate between missing migration (PGRST202 or 42883) and real runtime failures
-    const isMissingFunction =
-      rpcError.code === "PGRST202" ||
-      rpcError.code === "42883" ||
-      rpcError.message?.includes("function") ||
-      rpcError.message?.includes("does not exist");
+    // Discriminate between missing migration (exact function-not-found codes PGRST202 or 42883) and real runtime failures
+    const isMissingFunction = rpcError.code === "PGRST202" || rpcError.code === "42883";
 
     if (isMissingFunction) {
       backendUnmigrated = true;
