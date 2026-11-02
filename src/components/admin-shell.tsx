@@ -59,6 +59,12 @@ const NAV_GROUPS: NavGroup[] = [
         roles: ["administrator", "moderator"],
       },
       {
+        label: "Moderation Analytics",
+        href: "/admin/moderation/analytics",
+        icon: History,
+        roles: ["administrator"],
+      },
+      {
         label: "Users",
         href: "/admin/users",
         icon: Users,
