@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MobileReviewEvidence } from "@/components/mobile-review-evidence";
+import { WearableReviewEvidence } from "@/components/wearable-review-evidence";
 import { notFound, redirect } from "next/navigation";
 import { pageClient } from "@/lib/admin/server";
 import { ListingPhoto } from "@/components/listing-photo";
@@ -140,6 +141,10 @@ export default async function AdminListingDetailPage({
       ? `₹${(moderationListing.price_paise / 100).toLocaleString("en-IN")}`
       : "Not set";
 
+  // Query wearable evidence only for wearables listings, so this page keeps working where the wearables tables are not installed.
+  const categorySlug = Array.isArray(moderationListing.categories)
+    ? moderationListing.categories[0]?.slug
+    : (moderationListing.categories as { slug?: string } | null)?.slug;
   const categoryName = Array.isArray(moderationListing.categories)
     ? moderationListing.categories[0]?.name
     : (moderationListing.categories as { name?: string } | null)?.name;
@@ -211,6 +216,7 @@ export default async function AdminListingDetailPage({
           </div>
 
           <MobileReviewEvidence client={supabase as SupabaseClient} listingId={id}/>
+          {categorySlug === "wearables" && <WearableReviewEvidence client={supabase as SupabaseClient} listingId={id}/>}
           {/* Description */}
           <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm space-y-2">
             <h2 className="text-sm font-bold text-gray-900">Description</h2>
