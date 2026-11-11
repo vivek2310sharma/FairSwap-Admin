@@ -25,7 +25,7 @@ export default function ModerationActions({
   const [error, setError] = useState<string | null>(null);
 
   const handleApprove = async () => {
-    if (busy.current || !window.confirm(`Approve reviewed revision ${revision}?`)) return;
+    if (busy.current || !window.confirm(`Approve reviewed revision ${revision}? The listing will be valid for 365 days from publication, unless sold or removed sooner.`)) return;
     busy.current = true;
     setError(null);
     setIsSubmitting(true);
